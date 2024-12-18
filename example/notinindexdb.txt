@@ -1,0 +1,14 @@
+Cursor => IDBCursor
+CursorWithValue => none
+Database => IDBDatabase
+IdbFactory  => IDBFactory
+Index  => IDBIndex
+KeyRange => IDBKeyTange
+ObjectStore => IDBObjectStore
+Observation => none
+Observer => none
+ObserverChanges => none
+OpenDBRequest => IDBOpenDBRequest
+Request => IDBRequest
+Transaction => IDBTransaction
+VersionChangeEvent => DBVersionChangeEvent
