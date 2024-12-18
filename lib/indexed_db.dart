@@ -1,17 +1,9 @@
 /*
- * Package : Sporran
+ * Package : indexed_db
  * Author : S. Hamblett <steve.hamblett@linux.com>
- * Date   : 05/02/2014
- * Copyright :  S.Hamblett@OSCF
+ * Date   : 18/12/2024
+ * Copyright :  S.Hamblett
  */
 
-library;
-
-import 'dart:async';
-import 'dart:js_interop';
-import 'dart:typed_data';
-
-import 'package:web/web.dart';
-
-part 'src/indexed_db.dart';
+export 'src/indexed_db.dart';
 

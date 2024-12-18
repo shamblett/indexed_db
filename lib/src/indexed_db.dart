@@ -67,8 +67,14 @@
 /// documentation](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API).
 ///
 /// {@category Web (Legacy)}
-part of '../indexed_db.dart';
+///
+library;
 
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
+
+import 'package:web/web.dart';
 
 // Copyright (c) 2012, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
