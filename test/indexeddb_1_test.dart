@@ -3,12 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 library IndexedDB1Test;
-
-import 'package:expect/legacy/async_minitest.dart'; // ignore: deprecated_member_use
+/
 import 'dart:async';
-import 'dart:html' as html;
 import 'dart:math' as math;
-import 'dart:indexed_db' as idb;
+
+import 'package:indexed_db/indexed_db.dart' as idb;
+import 'package:web/web.dart';
 
 const String STORE_NAME = 'TEST';
 const int VERSION = 1;
@@ -23,7 +23,8 @@ Future testUpgrade() {
   var upgraded = false;
 
   // Delete any existing DBs.
-  return html.window.indexedDB!.deleteDatabase(dbName).then((_) {
+  final openReq = idb.Factory.deleteDatabase(dbName);
+  .then((_) {
     return html.window.indexedDB!
         .open(dbName, version: 1, onUpgradeNeeded: (e) {});
   }).then((db) {
