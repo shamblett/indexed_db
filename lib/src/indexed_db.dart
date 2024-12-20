@@ -35,16 +35,28 @@ import 'dart:typed_data';
 import 'package:web/web.dart';
 
 ///
+/// Version Change Event
+///
+extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
+
+///
 /// Factory
 ///
-extension type Factory(IDBFactory factory {
+extension type Factory._(IDBFactory factory) {
   IDBOpenDBRequest deleteDatabase(String name) => factory.deleteDatabase(name);
 
   int cmp(Object first, Object second) =>
       factory.cmp(first.jsify(), second.jsify());
 
-  Future<Database> open(String name, {int? version}) {
+  Future<Database> open(String name,
+      {int? version,
+      void Function(VersionChangeEvent event)? onUpgradeNeeded,
+      void Function(Event event)? onBlocked}) {
     final completer = Completer<Database>();
+    if ((version == null) != (onUpgradeNeeded == null)) {
+      return new Future.error(new ArgumentError(
+          'Version and onUpgradeNeeded must be specified together'));
+    }
     try {
       IDBOpenDBRequest request;
       if (version != null) {
@@ -55,6 +67,21 @@ extension type Factory(IDBFactory factory {
       request.onsuccess = ((Event _) {
         completer.complete((request.result! as Database));
       }).toJS;
+      request.onblocked = ((Event e) {
+        if (onBlocked != null) {
+          onBlocked(e);
+        } else {
+          return Future.error(StateError('Request was blocked'));
+        }
+      }).toJS;
+      request.onupgradeneeded = ((VersionChangeEvent e) {
+        if (onUpgradeNeeded != null) {
+          onUpgradeNeeded(e);
+        } else {
+          return Future.error(
+              StateError('Upgrade needed, no handler supplied'));
+        }
+      }).toJS;
       return completer.future;
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
@@ -62,12 +89,15 @@ extension type Factory(IDBFactory factory {
   }
 }
 
+///
 /// Transaction
 ///
-extension type Transaction(IDBTransaction transaction) {}
+extension type Transaction._(IDBTransaction transaction) {}
 
-/// in web apps.
-extension type Database(IDBDatabase database) {
+///
+/// Database
+///
+extension type Database._(IDBDatabase database) {
   Transaction transactionList(List<String> storeNames, String mode) {
     if (mode != 'readonly' && mode != 'readwrite') {
       throw new ArgumentError(mode);
