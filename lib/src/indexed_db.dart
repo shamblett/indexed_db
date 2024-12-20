@@ -40,9 +40,9 @@ import 'package:web/web.dart';
 extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
 
 ///
-/// Factory
+/// Factory - names idbFactory as per the dart:indexed_db API.
 ///
-extension type Factory._(IDBFactory factory) {
+extension type idbFactory._(IDBFactory factory) {
   IDBOpenDBRequest deleteDatabase(String name) => factory.deleteDatabase(name);
 
   int cmp(Object first, Object second) =>
@@ -65,7 +65,7 @@ extension type Factory._(IDBFactory factory) {
         request = factory.open(name);
       }
       request.onsuccess = ((Event _) {
-        completer.complete((request.result! as Database));
+        completer.complete(Database.fromOpenRequest(request.result!));
       }).toJS;
       request.onblocked = ((Event e) {
         if (onBlocked != null) {
@@ -87,6 +87,9 @@ extension type Factory._(IDBFactory factory) {
       return Future.error(e, stacktrace);
     }
   }
+
+  // Always supported now.
+  bool get supported => true;
 }
 
 ///
@@ -98,6 +101,22 @@ extension type Transaction._(IDBTransaction transaction) {}
 /// Database
 ///
 extension type Database._(IDBDatabase database) {
+  Database.fromOpenRequest(JSAny result) : database = (result as IDBDatabase);
+
+  String? get name => database.name;
+
+  List<String>? get objectStoreNames {
+    final length = database.objectStoreNames.length;
+    if (length == 0) {
+      return null;
+    }
+    final res = <String>[];
+    for (int i = 0; i <= length; i++) {
+      res.add(database.objectStoreNames.item(i)!);
+    }
+    return res;
+  }
+
   Transaction transactionList(List<String> storeNames, String mode) {
     if (mode != 'readonly' && mode != 'readwrite') {
       throw new ArgumentError(mode);

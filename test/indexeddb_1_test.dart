@@ -15,6 +15,6 @@ main() {
 
     test('Database', () {
       //idb.Database().transactionList(
-      idb.Factory().deleteDatabase('me');
+      idb.idbFactory().
     });
 }

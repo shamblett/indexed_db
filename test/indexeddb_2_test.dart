@@ -12,7 +12,7 @@ import 'package:test/test.dart';
 main() {
 
   test('Database', () {
-    idb.IdbFactory().deleteDatabase('me');
+    idb.idbFactory.
   });
 
 }
