@@ -30,7 +30,6 @@ library;
 
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:typed_data';
 
 import 'package:web/web.dart';
 
@@ -54,7 +53,7 @@ extension type idbFactory._(IDBFactory factory) {
       void Function(Event event)? onBlocked}) {
     final completer = Completer<Database>();
     if ((version == null) != (onUpgradeNeeded == null)) {
-      return new Future.error(new ArgumentError(
+      return Future.error(ArgumentError(
           'Version and onUpgradeNeeded must be specified together'));
     }
     try {
@@ -95,15 +94,42 @@ extension type idbFactory._(IDBFactory factory) {
 ///
 /// Transaction
 ///
-extension type Transaction._(IDBTransaction transaction) {}
+extension type Transaction._(IDBTransaction transaction) {
+  Transaction.fromDatabase(this.transaction);
+}
+
+///
+/// Object Store
+///
+extension type ObjectStore._(IDBObjectStore store) {
+  ObjectStore.fromCreateRequest(this.store);
+}
 
 ///
 /// Database
 ///
+/// An indexed database object for storing client-side data in web apps.
+///
 extension type Database._(IDBDatabase database) {
   Database.fromOpenRequest(JSAny result) : database = (result as IDBDatabase) {
     database.onabort = onAbortHandler();
+    database.onclose = onCloseHandler();
+    database.onerror = onErrorHandler();
   }
+
+  /// Static factory designed to expose events to event handlers
+  /// that are not necessarily instances of Database.
+  /// See EventStreamProvider for usage information.
+  static const EventStreamProvider<Event> abortEvent =
+      EventStreamProvider<ProgressEvent>('abort');
+  static const EventStreamProvider<Event> errorEvent =
+      EventStreamProvider<ProgressEvent>('error');
+  static const EventStreamProvider<Event> closeEvent =
+      EventStreamProvider<ProgressEvent>('close');
+  static const EventStreamProvider<Event> versionChangeEvent =
+      EventStreamProvider<ProgressEvent>('versionchange');
+
+  String? get name => database.name;
 
   List<String>? get objectStoreNames {
     final length = database.objectStoreNames.length;
@@ -125,18 +151,87 @@ extension type Database._(IDBDatabase database) {
     return null;
   }
 
-  String? get name => database.name;
-
   /// Stream of abort events handled by this Database.
   Stream<Event> get onAbort async* {
-    yield _abortValues[(this as Object)]!;
+    yield (_abortValues[(this as Object)]!);
+  }
+
+  static final _closeValues = Expando<Event>();
+
+  EventHandler onCloseHandler() {
+    final event = Event('close');
+    _closeValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of close events handled by this Database.
+  Stream<Event> get onClose async* {
+    yield _closeValues[(this as Object)]!;
+  }
+
+  static final _errorValues = Expando<Event>();
+
+  EventHandler onErrorHandler() {
+    final event = Event('error');
+    _errorValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of error events handled by this Database.
+  Stream<Event> get onError async* {
+    yield _errorValues[(this as Object)]!;
+  }
+
+  static final _versionChangeValues = Expando<Event>();
+
+  EventHandler onVersionHandler() {
+    final event = Event('versionchange');
+    _versionChangeValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of version change events handled by this [Database].
+  Stream<Event> get onVersionChange async* {
+    yield _versionChangeValues[(this as Object)]!;
+  }
+
+  int? get version => database.version;
+
+  void close() => database.close();
+
+  ObjectStore createObjectStore(
+    String name, {
+    dynamic keyPath,
+    bool? autoIncrement,
+  }) {
+    final options = IDBObjectStoreParameters(
+        keyPath: keyPath.jsify(), autoIncrement: autoIncrement!);
+
+    final objectStore = database.createObjectStore(name, options);
+    return ObjectStore.fromCreateRequest(objectStore);
+  }
+
+  Transaction transaction(dynamic storeName_OR_storeNames, String mode) {
+    if (mode != 'readonly' && mode != 'readwrite') {
+      throw ArgumentError(mode);
+    }
+    final transaction = database.transaction(storeName_OR_storeNames, mode);
+    return Transaction.fromDatabase(transaction);
   }
 
   Transaction transactionList(List<String> storeNames, String mode) {
     if (mode != 'readonly' && mode != 'readwrite') {
-      throw new ArgumentError(mode);
+      throw ArgumentError(mode);
     }
-    List storeNames_1 = storeNames;
-    return (database.transaction(storeNames_1.toJSBox, mode) as Transaction);
+    final transaction = database.transaction(storeNames.toJSBox, mode);
+    return Transaction.fromDatabase(transaction);
   }
+
+  Transaction transactionStore(String storeName, String mode) =>
+      transaction(storeName, mode);
+
+  Transaction transactionStores(List<String> storeName, String mode) =>
+      transactionList(storeName, mode);
+
+  void deleteObjectStore(String name) => database.deleteObjectStore(name);
 }
