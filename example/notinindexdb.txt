@@ -1,7 +1,6 @@
 Cursor => IDBCursor
 CursorWithValue => none
 Database => IDBDatabase
-IdbFactory  => IDBFactory
 Index  => IDBIndex
 KeyRange => IDBKeyTange
 ObjectStore => IDBObjectStore

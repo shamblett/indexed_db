@@ -88,8 +88,8 @@ extension type idbFactory._(IDBFactory factory) {
     }
   }
 
-  // Always supported now.
-  bool get supported => true;
+  /// Checks to see if Indexed DB is supported on the current platform.
+  bool get supported => true; // Always supported now.
 }
 
 ///
@@ -101,9 +101,9 @@ extension type Transaction._(IDBTransaction transaction) {}
 /// Database
 ///
 extension type Database._(IDBDatabase database) {
-  Database.fromOpenRequest(JSAny result) : database = (result as IDBDatabase);
-
-  String? get name => database.name;
+  Database.fromOpenRequest(JSAny result) : database = (result as IDBDatabase) {
+    database.onabort = onAbortHandler();
+  }
 
   List<String>? get objectStoreNames {
     final length = database.objectStoreNames.length;
@@ -115,6 +115,21 @@ extension type Database._(IDBDatabase database) {
       res.add(database.objectStoreNames.item(i)!);
     }
     return res;
+  }
+
+  static final _abortValues = Expando<Event>();
+
+  EventHandler onAbortHandler() {
+    final event = Event('abort');
+    _abortValues[(this as Object)] = event;
+    return null;
+  }
+
+  String? get name => database.name;
+
+  /// Stream of abort events handled by this Database.
+  Stream<Event> get onAbort async* {
+    yield _abortValues[(this as Object)]!;
   }
 
   Transaction transactionList(List<String> storeNames, String mode) {
