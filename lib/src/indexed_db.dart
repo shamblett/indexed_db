@@ -82,6 +82,13 @@ import 'package:web/web.dart';
 extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
 
 ///
+/// Version Change Event
+///
+extension type Request._(IDBRequest request) {
+  Request._fromObjectStore(this.request);
+}
+
+///
 /// Factory - names idbFactory as per the dart:indexed_db API.
 ///
 extension type idbFactory._(IDBFactory factory) {
@@ -139,13 +146,14 @@ extension type idbFactory._(IDBFactory factory) {
 ///
 extension type Transaction._(IDBTransaction transaction) {
   Transaction._fromDatabase(this.transaction);
+  Transaction._fromObjectStore(this.transaction);
 }
 
 ///
-/// Object Store
+/// Index
 ///
-extension type ObjectStore._(IDBObjectStore store) {
-  ObjectStore.fromCreateRequest(this.store);
+extension type Index._(IDBIndex index) {
+  Index._fromObjectStore(this.index);
 }
 
 ///
@@ -251,7 +259,7 @@ extension type Database._(IDBDatabase database) {
         keyPath: keyPath.jsify(), autoIncrement: autoIncrement!);
 
     final objectStore = database.createObjectStore(name, options);
-    return ObjectStore.fromCreateRequest(objectStore);
+    return ObjectStore._fromCreateRequest(objectStore);
   }
 
   Transaction transaction(dynamic storeName_OR_storeNames, String mode) {
@@ -321,4 +329,107 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   Stream<Event> get onUpgradeNeeded async* {
     yield (_upgradeNeededValues[(this as Object)]!);
   }
+}
+
+///
+/// Object Store
+///
+extension type ObjectStore._(IDBObjectStore store) {
+  ObjectStore._fromCreateRequest(objectStore) : store = objectStore;
+
+  bool? get autoIncrement => store.autoIncrement;
+
+  List<String>? get indexNames {
+    final length = store.indexNames.length;
+    if (length == 0) {
+      return null;
+    }
+    final res = <String>[];
+    for (int i = 0; i <= length; i++) {
+      res.add(store.indexNames.item(i)!);
+    }
+    return res;
+  }
+
+  Object? get keyPath => store.keyPath;
+
+  String? get name => store.name;
+
+  Transaction? get transaction =>
+      Transaction._fromObjectStore(store.transaction);
+
+  Future add(dynamic value, [dynamic key]) {
+    try {
+      final IDBRequest request;
+      if (key != null) {
+        request = store.add(value, key);
+      } else {
+        request = store.add(value);
+      }
+      return _completeRequest(Request._fromObjectStore(request));
+    } catch (e, stacktrace) {
+      return new Future.error(e, stacktrace);
+    }
+  }
+
+  Future<int> count([dynamic key_OR_range]) {
+    try {
+      var request = store.count(key_OR_range);
+      return _completeRequest(Request._fromObjectStore(request));
+    } catch (e, stacktrace) {
+      return new Future.error(e, stacktrace);
+    }
+  }
+
+  Index createIndex(
+    String name,
+    dynamic keyPath, {
+    bool? unique,
+    bool? multiEntry,
+  }) {
+    final options = IDBIndexParameters();
+    if (unique != null) {
+      options.unique = unique;
+    }
+    if (multiEntry != null) {
+      options.multiEntry = multiEntry;
+    }
+    return Index._fromObjectStore(store.createIndex(name, keyPath, options));
+  }
+
+  Future delete(dynamic key_OR_keyRange) {
+    try {
+      return _completeRequest(
+          Request._fromObjectStore(store.delete(key_OR_keyRange)));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  void deleteIndex(String name) => store.deleteIndex(name);
+
+  Request getAll(Object? query, [int? count]) =>
+      Request._fromObjectStore(store.getAll(query.jsify(), count ?? 0));
+
+  Request getAllKeys(Object? query, [int? count]) =>
+      Request._fromObjectStore(store.getAllKeys(query.jsify(), count ?? 0));
+
+  Request getKey(Object key) =>
+      Request._fromObjectStore(store.getKey(key.jsify()));
+}
+
+//
+// Ties a request to a completer, so the completer is completed when it succeeds
+// and errors out when the request errors.
+//
+Future<T> _completeRequest<T>(Request request) {
+  var completer = new Completer<T>.sync();
+  // TODO: make sure that completer.complete is synchronous as transactions
+  // may be committed if the result is not processed immediately.
+  request.onSuccess.listen((e) {
+    T result = request.result;
+    completer.complete(result);
+  });
+  request.onError.listen(completer.completeError);
+  return completer.future;
 }
