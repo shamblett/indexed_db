@@ -278,3 +278,47 @@ extension type Database._(IDBDatabase database) {
 
   void deleteObjectStore(String name) => database.deleteObjectStore(name);
 }
+
+///
+/// OpenDBRequest
+///
+extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
+  OpenDBRequest(this.openRequest) {
+    openRequest.onblocked = onBlockedHandler();
+    openRequest.onupgradeneeded = onUpgradeNeededHandler();
+  }
+
+  /// Static factory designed to expose events to event handlers
+  /// that are not necessarily instances of Database.
+  /// See EventStreamProvider for usage information.
+  static const EventStreamProvider<Event> blockedEvent =
+      EventStreamProvider<ProgressEvent>('blocked');
+  static const EventStreamProvider<Event> upgradeNeededEvent =
+      EventStreamProvider<ProgressEvent>('upgradeneeded');
+
+  static final _blockedValues = Expando<Event>();
+
+  EventHandler onBlockedHandler() {
+    final event = Event('blocked');
+    _blockedValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of blocked events handled by this Database.
+  Stream<Event> get onAbort async* {
+    yield (_blockedValues[(this as Object)]!);
+  }
+
+  static final _upgradeNeededValues = Expando<Event>();
+
+  EventHandler onUpgradeNeededHandler() {
+    final event = Event('upgradeNeeded');
+    _upgradeNeededValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of upgrade needed events handled by this Database.
+  Stream<Event> get onUpgradeNeeded async* {
+    yield (_upgradeNeededValues[(this as Object)]!);
+  }
+}
