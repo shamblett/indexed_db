@@ -90,13 +90,11 @@ extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
 ///
 extension type Request._(IDBRequest request) {
   Request._fromObjectStore(this.request) {
-    request.onerror = onErrorHandler();
-    request.onsuccess = onSuccessHandler();
+    _initialiseHandlers();
   }
 
   Request._fromCursor(this.request) {
-    request.onerror = onErrorHandler();
-    request.onsuccess = onSuccessHandler();
+    _initialiseHandlers();
   }
 
   /// Static factory designed to expose events to event handlers
@@ -143,6 +141,11 @@ extension type Request._(IDBRequest request) {
 
   Transaction? get transaction =>
       Transaction._fromRequest(request.transaction!);
+
+  void _initialiseHandlers() {
+    request.onerror = onErrorHandler();
+    request.onsuccess = onSuccessHandler();
+  }
 }
 
 ///
