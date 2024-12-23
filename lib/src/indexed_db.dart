@@ -89,6 +89,15 @@ extension type Request._(IDBRequest request) {
 }
 
 ///
+/// Cursor With Value
+///
+extension type CursorWithValue._(IDBCursorWithValue cursor) {}
+
+///
+/// Cursor
+///
+extension type Cursor._(IDBCursor cursor) {}
+
 /// Factory - names idbFactory as per the dart:indexed_db API.
 ///
 extension type idbFactory._(IDBFactory factory) {
@@ -157,6 +166,11 @@ extension type Index._(IDBIndex index) {
 }
 
 ///
+/// Key range
+///
+///
+extension type KeyRange._(IDBKeyRange keyRange) {}
+
 /// Database
 ///
 /// An indexed database object for storing client-side data in web apps.
@@ -416,6 +430,79 @@ extension type ObjectStore._(IDBObjectStore store) {
 
   Request getKey(Object key) =>
       Request._fromObjectStore(store.getKey(key.jsify()));
+
+  Future getObject(dynamic key) {
+    try {
+      final request = store.get(key);
+      return _completeRequest(Request._fromObjectStore(request));
+    } catch (e, stacktrace) {
+      return new Future.error(e, stacktrace);
+    }
+  }
+
+  Index index(String name) => Index._fromObjectStore(store.index(name));
+
+  ///
+  ///  Creates a stream of cursors over the records in this object store.
+  ///
+  /// **The stream must be manually advanced by calling [Cursor.next] after
+  /// each item or by specifying autoAdvance to be true.**
+  ///
+  ///     var cursors = objectStore.openCursor().listen(
+  ///       (cursor) {
+  ///         // ...some processing with the cursor
+  ///         cursor.next(); // advance onto the next cursor.
+  ///       },
+  ///       onDone: () {
+  ///         // called when there are no more cursors.
+  ///         print('all done!');
+  ///       });
+  ///
+  /// Asynchronous operations which are not related to the current transaction
+  /// will cause the transaction to automatically be committed-- all processing
+  /// must be done synchronously unless they are additional async requests to
+  /// the current transaction.
+  ///
+  Stream<CursorWithValue> openCursor({
+    dynamic key,
+    KeyRange? range,
+    String? direction,
+    bool? autoAdvance,
+  }) {
+    var key_OR_range = null;
+    if (key != null) {
+      if (range != null) {
+        throw ArgumentError('Cannot specify both key and range.');
+      }
+      key_OR_range = key;
+    } else {
+      key_OR_range = range;
+    }
+
+    final Request request;
+    if (direction == null) {
+      request = Request._fromObjectStore(store.openCursor(key_OR_range));
+    } else {
+      request = Request._fromObjectStore(store.openCursor(key_OR_range, direction));
+    }
+    return _cursorStreamFromResult(request, autoAdvance)
+  }
+
+  Request openKeyCursor( Object? range, [ String? direction ]) => Request._fromObjectStore(store.openKeyCursor(range.jsify(), direction ?? 'next'));
+
+  Future put( dynamic value, [ dynamic key ]) {
+    try {
+      final Request request;
+      if (key != null) {
+        request = Request._fromObjectStore((store.put(value, key));
+      } else {
+        request = Request._fromObjectStore(store.put(value));
+      }
+      return _completeRequest(request);
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
 }
 
 //
@@ -432,4 +519,29 @@ Future<T> _completeRequest<T>(Request request) {
   });
   request.onError.listen(completer.completeError);
   return completer.future;
+}
+
+//
+// Helper for iterating over cursors in a request.
+//
+Stream<T> _cursorStreamFromResult<T extends Cursor>(
+Request request, bool? autoAdvance) {
+
+final controller = StreamController<T>(sync: true);
+
+request.onError.listen(controller.addError);
+
+request.onSuccess.listen((e) {
+T? cursor = request.result as dynamic;
+if (cursor == null) {
+controller.close();
+} else {
+controller.add(cursor);
+if (autoAdvance == true && controller.hasListener) {
+cursor.next();
+}
+}
+});
+
+return controller.stream;
 }
