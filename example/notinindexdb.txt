@@ -1,5 +1,3 @@
-CursorWithValue => IDBCursorWithValue
-Index  => IDBIndex
 KeyRange => IDBKeyRange
 Observation => none
 Observer => none

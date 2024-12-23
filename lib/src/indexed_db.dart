@@ -123,6 +123,10 @@ extension type Request._(IDBRequest request) {
     _initialiseHandlers();
   }
 
+  Request._fromIndex(this.request) {
+    _initialiseHandlers();
+  }
+
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
   /// See EventStreamProvider for usage information.
@@ -177,7 +181,9 @@ extension type Request._(IDBRequest request) {
 ///
 /// Cursor With Value
 ///
-extension type CursorWithValue._(IDBCursorWithValue cursor) {}
+extension type CursorWithValue._(IDBCursorWithValue cursor) {
+  dynamic get value => cursor.value;
+}
 
 ///
 /// Cursor
@@ -281,6 +287,100 @@ extension type Transaction._(IDBTransaction transaction) {
 ///
 extension type Index._(IDBIndex index) {
   Index._fromObjectStore(this.index);
+
+  Object? get keyPath => index.keyPath;
+
+  bool? get multiEntry => index.multiEntry;
+
+  String? get name => index.name;
+
+  ObjectStore? get objectStore => ObjectStore._fromIndex(index.objectStore);
+
+  bool? get unique => index.unique;
+
+  Future<int> count([dynamic key_OR_range]) {
+    try {
+      final Request request = Request._fromIndex(index.count(key_OR_range));
+      return _completeRequest(request);
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  Future get(dynamic key) {
+    try {
+      final Request request = Request._fromIndex(index.get(key));
+      return _completeRequest(request);
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  Request getAll(Object? query, [int? count]) =>
+      Request._fromIndex(index.getAll(query.jsify(), count ?? 0));
+
+  Request getAllKeys(Object? query, [int? count]) =>
+      Request._fromIndex(index.getAllKeys(query.jsify(), count ?? 0));
+
+  Future getKey(dynamic key) {
+    try {
+      final Request request = Request._fromIndex(index.getKey(key));
+      return _completeRequest(request);
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  Stream<CursorWithValue> openCursor({
+    dynamic key,
+    KeyRange? range,
+    String? direction,
+    bool? autoAdvance,
+  }) {
+    var key_OR_range = null;
+    if (key != null) {
+      if (range != null) {
+        throw ArgumentError('Cannot specify both key and range.');
+      }
+      key_OR_range = key;
+    } else {
+      key_OR_range = range;
+    }
+    Request request;
+    if (direction == null) {
+      request = Request._fromIndex(index.openCursor(key_OR_range, "next"));
+    } else {
+      request = Request._fromIndex(index.openCursor(key_OR_range, direction));
+    }
+    return _cursorStreamFromResult(request, autoAdvance);
+  }
+
+  /// Creates a stream of cursors over the records in this object store.
+  /// See also [ObjectStore.openCursor]
+  Stream<Cursor> openKeyCursor({
+    dynamic key,
+    KeyRange? range,
+    String? direction,
+    bool? autoAdvance,
+  }) {
+    var key_OR_range = null;
+    if (key != null) {
+      if (range != null) {
+        throw ArgumentError('Cannot specify both key and range.');
+      }
+      key_OR_range = key;
+    } else {
+      key_OR_range = range;
+    }
+    Request request;
+    if (direction == null) {
+      request = Request._fromIndex(index.openKeyCursor(key_OR_range, "next"));
+    } else {
+      request =
+          Request._fromIndex(index.openKeyCursor(key_OR_range, direction));
+    }
+    return _cursorStreamFromResult(request, autoAdvance);
+  }
 }
 
 ///
@@ -468,6 +568,7 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
 ///
 extension type ObjectStore._(IDBObjectStore store) {
   ObjectStore._fromCreateRequest(objectStore) : store = objectStore;
+  ObjectStore._fromIndex(this.store);
 
   bool? get autoIncrement => store.autoIncrement;
 
