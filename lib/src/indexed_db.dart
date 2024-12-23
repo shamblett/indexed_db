@@ -112,7 +112,7 @@ extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
 }
 
 ///
-/// Version Change Event
+/// Request
 ///
 extension type Request._(IDBRequest request) {
   Request._fromObjectStore(this.request) {
