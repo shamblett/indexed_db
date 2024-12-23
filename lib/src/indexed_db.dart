@@ -94,6 +94,11 @@ extension type Request._(IDBRequest request) {
     request.onsuccess = onSuccessHandler();
   }
 
+  Request._fromCursor(this.request) {
+    request.onerror = onErrorHandler();
+    request.onsuccess = onSuccessHandler();
+  }
+
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
   /// See EventStreamProvider for usage information.
@@ -148,7 +153,38 @@ extension type CursorWithValue._(IDBCursorWithValue cursor) {}
 ///
 /// Cursor
 ///
-extension type Cursor._(IDBCursor cursor) {}
+extension type Cursor._(IDBCursor cursor) {
+  String? get direction => cursor.direction;
+
+  Object? get key => cursor.key;
+
+  Object? get primaryKey => cursor.primaryKey;
+
+  Object? get source => cursor.source;
+
+  void advance(int count) => cursor.advance(count);
+
+  void continuePrimaryKey(Object key, Object primaryKey) =>
+      cursor.continuePrimaryKey(key.jsify(), primaryKey.jsify());
+
+  Future delete() {
+    try {
+      return _completeRequest(Request._fromCursor(cursor.delete()));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  void next([Object? key]) => cursor.continue_(key.jsify());
+
+  Future update(dynamic value) {
+    try {
+      return _completeRequest(Request._fromCursor(cursor.update(value)));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+}
 
 /// Factory - names idbFactory as per the dart:indexed_db API.
 ///

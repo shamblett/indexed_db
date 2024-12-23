@@ -1,11 +1,8 @@
-Cursor => IDBCursor
 CursorWithValue => IDBCursorWithValue
 Index  => IDBIndex
-KeyRange => IDBKeyTange
-ObjectStore => IDBObjectStore
+KeyRange => IDBKeyRange
 Observation => none
 Observer => none
 ObserverChanges => none
-Request => IDBRequest
 Transaction => IDBTransaction
 VersionChangeEvent => DBVersionChangeEvent
