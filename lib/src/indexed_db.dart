@@ -77,6 +77,10 @@ import 'dart:js_interop';
 import 'package:web/web.dart';
 
 ///
+/// Type defines
+///
+typedef DomException = DOMException;
+
 /// Version Change Event
 ///
 extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
@@ -85,7 +89,55 @@ extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
 /// Version Change Event
 ///
 extension type Request._(IDBRequest request) {
-  Request._fromObjectStore(this.request);
+  Request._fromObjectStore(this.request) {
+    request.onerror = onErrorHandler();
+    request.onsuccess = onSuccessHandler();
+  }
+
+  /// Static factory designed to expose events to event handlers
+  /// that are not necessarily instances of Database.
+  /// See EventStreamProvider for usage information.
+  static const EventStreamProvider<Event> successEvent =
+      EventStreamProvider<ProgressEvent>('success');
+  static const EventStreamProvider<Event> errorEvent =
+      EventStreamProvider<ProgressEvent>('error');
+
+  DomException? get error => request.error;
+
+  static final _errorValues = Expando<Event>();
+
+  EventHandler onErrorHandler() {
+    final event = Event('error');
+    _errorValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of error events handled by this Request.
+  Stream<Event> get onError async* {
+    yield (_errorValues[(this as Object)]!);
+  }
+
+  static final _successValues = Expando<Event>();
+
+  EventHandler onSuccessHandler() {
+    final event = Event('success');
+    _successValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of success events handled by this Request.
+  Stream<Event> get onSuccess async* {
+    yield (_successValues[(this as Object)]!);
+  }
+
+  String? get readyState => request.readyState;
+
+  dynamic get result => request.result;
+
+  Object? get source => request.source;
+
+  Transaction? get transaction =>
+      Transaction._fromRequest(request.transaction!);
 }
 
 ///
@@ -156,6 +208,7 @@ extension type idbFactory._(IDBFactory factory) {
 extension type Transaction._(IDBTransaction transaction) {
   Transaction._fromDatabase(this.transaction);
   Transaction._fromObjectStore(this.transaction);
+  Transaction._fromRequest(this.transaction);
 }
 
 ///
@@ -302,7 +355,7 @@ extension type Database._(IDBDatabase database) {
 }
 
 ///
-/// OpenDBRequest
+/// Open DB Request
 ///
 extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   OpenDBRequest(this.openRequest) {
@@ -483,18 +536,21 @@ extension type ObjectStore._(IDBObjectStore store) {
     if (direction == null) {
       request = Request._fromObjectStore(store.openCursor(key_OR_range));
     } else {
-      request = Request._fromObjectStore(store.openCursor(key_OR_range, direction));
+      request =
+          Request._fromObjectStore(store.openCursor(key_OR_range, direction));
     }
-    return _cursorStreamFromResult(request, autoAdvance)
+    return _cursorStreamFromResult(request, autoAdvance);
   }
 
-  Request openKeyCursor( Object? range, [ String? direction ]) => Request._fromObjectStore(store.openKeyCursor(range.jsify(), direction ?? 'next'));
+  Request openKeyCursor(Object? range, [String? direction]) =>
+      Request._fromObjectStore(
+          store.openKeyCursor(range.jsify(), direction ?? 'next'));
 
-  Future put( dynamic value, [ dynamic key ]) {
+  Future put(dynamic value, [dynamic key]) {
     try {
       final Request request;
       if (key != null) {
-        request = Request._fromObjectStore((store.put(value, key));
+        request = Request._fromObjectStore(store.put(value, key));
       } else {
         request = Request._fromObjectStore(store.put(value));
       }
@@ -525,23 +581,21 @@ Future<T> _completeRequest<T>(Request request) {
 // Helper for iterating over cursors in a request.
 //
 Stream<T> _cursorStreamFromResult<T extends Cursor>(
-Request request, bool? autoAdvance) {
+    Request request, bool? autoAdvance) {
+  final controller = StreamController<T>(sync: true);
 
-final controller = StreamController<T>(sync: true);
+  request.onError.listen(controller.addError);
 
-request.onError.listen(controller.addError);
-
-request.onSuccess.listen((e) {
-T? cursor = request.result as dynamic;
-if (cursor == null) {
-controller.close();
-} else {
-controller.add(cursor);
-if (autoAdvance == true && controller.hasListener) {
-cursor.next();
-}
-}
-});
-
-return controller.stream;
+  request.onSuccess.listen((e) {
+    T? cursor = request.result;
+    if (cursor == null) {
+      controller.close();
+    } else {
+      controller.add(cursor);
+      if (autoAdvance == true && controller.hasListener) {
+        (cursor as dynamic).next();
+      }
+    }
+  });
+  return controller.stream;
 }
