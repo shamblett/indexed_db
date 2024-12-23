@@ -1,5 +1,5 @@
 Cursor => IDBCursor
-CursorWithValue => none
+CursorWithValue => IDBCursorWithValue
 Index  => IDBIndex
 KeyRange => IDBKeyTange
 ObjectStore => IDBObjectStore
