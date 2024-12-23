@@ -83,7 +83,33 @@ typedef DomException = DOMException;
 
 /// Version Change Event
 ///
-extension type VersionChangeEvent._(IDBVersionChangeEvent event) {}
+extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
+  factory VersionChangeEvent(String type, [Map? eventInitDict]) {
+    if (eventInitDict != null) {
+      var eventInitDict_1 = eventInitDict;
+      return VersionChangeEvent._create_1(type, eventInitDict_1);
+    }
+    return VersionChangeEvent._create_2(type);
+  }
+
+  static VersionChangeEvent _create_1(type, eventInitDict) =>
+      (IDBVersionChangeEvent(type, eventInitDict) as VersionChangeEvent);
+
+  static VersionChangeEvent _create_2(type) =>
+      (IDBVersionChangeEvent(type) as VersionChangeEvent);
+
+  @Deprecated('dataLoss no longer supported on IDBVersionChangeEvent')
+  String? get dataLoss => 'Not Implemented';
+
+  @Deprecated('dataLossMessage no longer supported on IDBVersionChangeEvent')
+  String? get dataLossMessage => 'Not Implemented';
+
+  int? get newVersion => event.newVersion;
+
+  int? get oldVersion => event.oldVersion;
+
+  OpenDBRequest get target => OpenDBRequest((event.target as IDBOpenDBRequest));
+}
 
 ///
 /// Version Change Event

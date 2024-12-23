@@ -5,4 +5,3 @@ Observation => none
 Observer => none
 ObserverChanges => none
 Transaction => IDBTransaction
-VersionChangeEvent => DBVersionChangeEvent
