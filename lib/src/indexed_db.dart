@@ -71,6 +71,9 @@
 ///
 library;
 
+// ignore_for_file: camel_case_types
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 import 'dart:js_interop';
 
@@ -435,7 +438,7 @@ extension type Index._(IDBIndex index) {
     String? direction,
     bool? autoAdvance,
   }) {
-    var key_OR_range = null;
+    dynamic key_OR_range;
     if (key != null) {
       if (range != null) {
         throw ArgumentError('Cannot specify both key and range.');
@@ -461,7 +464,7 @@ extension type Index._(IDBIndex index) {
     String? direction,
     bool? autoAdvance,
   }) {
-    var key_OR_range = null;
+    dynamic key_OR_range;
     if (key != null) {
       if (range != null) {
         throw ArgumentError('Cannot specify both key and range.');
@@ -730,7 +733,7 @@ extension type ObjectStore._(IDBObjectStore store) {
       }
       return _completeRequest(Request._fromObjectStore(request));
     } catch (e, stacktrace) {
-      return new Future.error(e, stacktrace);
+      return Future.error(e, stacktrace);
     }
   }
 
@@ -739,7 +742,7 @@ extension type ObjectStore._(IDBObjectStore store) {
       var request = store.count(key_OR_range);
       return _completeRequest(Request._fromObjectStore(request));
     } catch (e, stacktrace) {
-      return new Future.error(e, stacktrace);
+      return Future.error(e, stacktrace);
     }
   }
 
@@ -784,7 +787,7 @@ extension type ObjectStore._(IDBObjectStore store) {
       final request = store.get(key);
       return _completeRequest(Request._fromObjectStore(request));
     } catch (e, stacktrace) {
-      return new Future.error(e, stacktrace);
+      return Future.error(e, stacktrace);
     }
   }
 
@@ -817,7 +820,7 @@ extension type ObjectStore._(IDBObjectStore store) {
     String? direction,
     bool? autoAdvance,
   }) {
-    var key_OR_range = null;
+    dynamic key_OR_range;
     if (key != null) {
       if (range != null) {
         throw ArgumentError('Cannot specify both key and range.');
@@ -861,9 +864,7 @@ extension type ObjectStore._(IDBObjectStore store) {
 // and errors out when the request errors.
 //
 Future<T> _completeRequest<T>(Request request) {
-  var completer = new Completer<T>.sync();
-  // TODO: make sure that completer.complete is synchronous as transactions
-  // may be committed if the result is not processed immediately.
+  var completer = Completer<T>.sync();
   request.onSuccess.listen((e) {
     T result = request.result;
     completer.complete(result);
