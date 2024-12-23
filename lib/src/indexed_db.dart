@@ -277,9 +277,107 @@ extension type idbFactory._(IDBFactory factory) {
 /// Transaction
 ///
 extension type Transaction._(IDBTransaction transaction) {
-  Transaction._fromDatabase(this.transaction);
-  Transaction._fromObjectStore(this.transaction);
-  Transaction._fromRequest(this.transaction);
+  Transaction._fromDatabase(this.transaction) {
+    _initialiseHandlers();
+  }
+  Transaction._fromObjectStore(this.transaction) {
+    _initialiseHandlers();
+  }
+  Transaction._fromRequest(this.transaction) {
+    _initialiseHandlers();
+  }
+
+  /// Static factory designed to expose events to event handlers
+  /// that are not necessarily instances of Database.
+  /// See EventStreamProvider for usage information.
+  static const EventStreamProvider<Event> abortEvent =
+      EventStreamProvider<ProgressEvent>('abort');
+  static const EventStreamProvider<Event> errorEvent =
+      EventStreamProvider<ProgressEvent>('error');
+  static const EventStreamProvider<Event> completeEvent =
+      EventStreamProvider<ProgressEvent>('complete');
+
+  static final _errorValues = Expando<Event>();
+
+  EventHandler onErrorHandler() {
+    final event = Event('error');
+    _errorValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of error events handled by this Request.
+  Stream<Event> get onError async* {
+    yield (_errorValues[(this as Object)]!);
+  }
+
+  static final _abortValues = Expando<Event>();
+
+  EventHandler onAbortHandler() {
+    final event = Event('abort');
+    _abortValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of abort events handled by this Request.
+  Stream<Event> get onAbort async* {
+    yield (_abortValues[(this as Object)]!);
+  }
+
+  static final _completeValues = Expando<Event>();
+
+  EventHandler onCompleteHandler() {
+    final event = Event('complete');
+    _completeValues[(this as Object)] = event;
+    return null;
+  }
+
+  /// Stream of complete events handled by this Request.
+  Stream<Event> get onComplete async* {
+    yield (_completeValues[(this as Object)]!);
+  }
+
+  /// Provides a Future which will be completed once the transaction has completed.
+  /// The future will error if an error occurs on the transaction or if the transaction is aborted.
+  Future<Database> get completed {
+    final completer = Completer<Database>();
+
+    onComplete.first.then((_) {
+      completer.complete(Database._fromTransaction(transaction.db));
+    });
+
+    onError.first.then((e) {
+      completer.completeError(e);
+    });
+
+    onAbort.first.then((e) {
+      // Avoid completing twice if an error occurs.
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
+    });
+
+    return completer.future;
+  }
+
+  Database? get db => Database._fromTransaction(transaction.db);
+
+  DomException? get error => transaction.error;
+
+  String? get mode => transaction.mode;
+
+  List<String>? get objectStoreNames =>
+      _domStringsToList(transaction.objectStoreNames);
+
+  void abort() => transaction.abort();
+
+  ObjectStore objectStore(String name) =>
+      ObjectStore._fromTransaction(transaction.objectStore(name));
+
+  void _initialiseHandlers() {
+    transaction.onerror = onErrorHandler();
+    transaction.onabort = onAbortHandler();
+    transaction.oncomplete = onCompleteHandler();
+  }
 }
 
 ///
@@ -395,9 +493,11 @@ extension type KeyRange._(IDBKeyRange keyRange) {}
 ///
 extension type Database._(IDBDatabase database) {
   Database._fromOpenRequest(JSAny result) : database = (result as IDBDatabase) {
-    database.onabort = onAbortHandler();
-    database.onclose = onCloseHandler();
-    database.onerror = onErrorHandler();
+    _initialiseHandlers();
+  }
+
+  Database._fromTransaction(this.database) {
+    _initialiseHandlers();
   }
 
   /// Static factory designed to expose events to event handlers
@@ -414,17 +514,8 @@ extension type Database._(IDBDatabase database) {
 
   String? get name => database.name;
 
-  List<String>? get objectStoreNames {
-    final length = database.objectStoreNames.length;
-    if (length == 0) {
-      return null;
-    }
-    final res = <String>[];
-    for (int i = 0; i <= length; i++) {
-      res.add(database.objectStoreNames.item(i)!);
-    }
-    return res;
-  }
+  List<String>? get objectStoreNames =>
+      _domStringsToList(database.objectStoreNames);
 
   static final _abortValues = Expando<Event>();
 
@@ -517,6 +608,12 @@ extension type Database._(IDBDatabase database) {
       transactionList(storeName, mode);
 
   void deleteObjectStore(String name) => database.deleteObjectStore(name);
+
+  void _initialiseHandlers() {
+    database.onerror = onErrorHandler();
+    database.onabort = onAbortHandler();
+    database.onclose = onCloseHandler();
+  }
 }
 
 ///
@@ -569,20 +666,11 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
 extension type ObjectStore._(IDBObjectStore store) {
   ObjectStore._fromCreateRequest(objectStore) : store = objectStore;
   ObjectStore._fromIndex(this.store);
+  ObjectStore._fromTransaction(this.store);
 
   bool? get autoIncrement => store.autoIncrement;
 
-  List<String>? get indexNames {
-    final length = store.indexNames.length;
-    if (length == 0) {
-      return null;
-    }
-    final res = <String>[];
-    for (int i = 0; i <= length; i++) {
-      res.add(store.indexNames.item(i)!);
-    }
-    return res;
-  }
+  List<String>? get indexNames => _domStringsToList(store.indexNames);
 
   Object? get keyPath => store.keyPath;
 
@@ -764,4 +852,19 @@ Stream<T> _cursorStreamFromResult<T extends Cursor>(
     }
   });
   return controller.stream;
+}
+
+//
+// Helper function for DOM String Lists
+//
+List<String>? _domStringsToList(DOMStringList strings) {
+  final length = strings.length;
+  if (length == 0) {
+    return null;
+  }
+  final res = <String>[];
+  for (int i = 0; i <= length; i++) {
+    res.add(strings.item(i)!);
+  }
+  return res;
 }
