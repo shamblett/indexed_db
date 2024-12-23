@@ -485,7 +485,48 @@ extension type Index._(IDBIndex index) {
 /// Key range
 ///
 ///
-extension type KeyRange._(IDBKeyRange keyRange) {}
+extension type KeyRange._(IDBKeyRange keyrange) {
+  KeyRange.bound(
+    dynamic lower,
+    dynamic upper, [
+    bool lowerOpen = false,
+    bool upperOpen = false,
+  ]) : keyrange = IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen);
+
+  KeyRange.lowerBound(dynamic bound, [bool open = false])
+      : keyrange = IDBKeyRange.lowerBound(bound, open);
+
+  KeyRange.only(dynamic value) : keyrange = IDBKeyRange.only(value);
+
+  KeyRange.upperBound(dynamic bound, [bool open = false])
+      : keyrange = IDBKeyRange.upperBound(bound, open);
+
+  Object? get lower => keyrange.lower;
+
+  Object? get lowerOpen => keyrange.lowerOpen;
+
+  Object? get upper => keyrange.upper;
+
+  Object? get upperOpen => keyrange.upperOpen;
+
+  bool includes(Object key) => keyrange.includes(key.jsify());
+
+  static KeyRange bound_(
+    Object lower,
+    Object upper, [
+    bool? lowerOpen,
+    bool? upperOpen,
+  ]) =>
+      KeyRange.bound(lower, upper, lowerOpen ?? false, upperOpen ?? false);
+
+  static KeyRange lowerBound_(Object bound, [bool? open]) =>
+      KeyRange.lowerBound(bound, open ?? false);
+
+  static KeyRange only_(Object value) => KeyRange.only(value);
+
+  static KeyRange upperBound_(Object bound, [bool? open]) =>
+      KeyRange.upperBound(bound, open ?? false);
+}
 
 /// Database
 ///

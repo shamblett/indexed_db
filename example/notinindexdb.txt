@@ -1,5 +1,3 @@
-KeyRange => IDBKeyRange
 Observation => none
 Observer => none
 ObserverChanges => none
-Transaction => IDBTransaction
