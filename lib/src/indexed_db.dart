@@ -224,7 +224,8 @@ extension type Cursor._(IDBCursor cursor) {
   }
 }
 
-/// Factory - names idbFactory as per the dart:indexed_db API.
+///
+/// Factory - named idbFactory as per the dart:indexed_db API.
 ///
 extension type idbFactory._(IDBFactory factory) {
   IDBOpenDBRequest deleteDatabase(String name) => factory.deleteDatabase(name);
@@ -485,8 +486,7 @@ extension type Index._(IDBIndex index) {
 }
 
 ///
-/// Key range
-///
+/// Key Range
 ///
 extension type KeyRange._(IDBKeyRange keyrange) {
   KeyRange.bound(
@@ -531,6 +531,7 @@ extension type KeyRange._(IDBKeyRange keyrange) {
       KeyRange.upperBound(bound, open ?? false);
 }
 
+///
 /// Database
 ///
 /// An indexed database object for storing client-side data in web apps.
