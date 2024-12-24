@@ -162,4 +162,42 @@ main() {
     expect(database.version, 1);
     expect(database.objectStoreNames, isNull);
   });
+
+  test('Open - Version - no upgrade needed callback', () async {
+    var dbName = nextDatabaseName();
+    final factory = idb.IdbFactory();
+
+    // Delete any existing DBs.
+    factory.deleteDatabase(dbName);
+
+    // Open the database at version 1 with no upgrade needed callback
+    expect(
+        factory.open(dbName, version: version), throwsA(isA<ArgumentError>()));
+  });
+
+  test('Open - Version - with upgrade needed callback', () async {
+    var upgradeCalled = false;
+    idb.VersionChangeEvent changeEvent = idb.VersionChangeEvent('test');
+    void onUpgradeNeeded(idb.VersionChangeEvent event) {
+      upgradeCalled = true;
+      changeEvent = event;
+    }
+
+    var dbName = nextDatabaseName();
+    final factory = idb.IdbFactory();
+
+    // Delete any existing DBs.
+    factory.deleteDatabase(dbName);
+
+    // Open the database at version 1
+    final database = await factory.open(dbName,
+        version: version, onUpgradeNeeded: onUpgradeNeeded);
+    expect(database, isNotNull);
+    expect(database.name, dbName);
+    expect(database.version, 1);
+    expect(database.objectStoreNames, isNull);
+    expect(upgradeCalled, isTrue);
+    expect(changeEvent.oldVersion, 0);
+    expect(changeEvent.newVersion, 1);
+  });
 }

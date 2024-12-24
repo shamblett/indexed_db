@@ -75,6 +75,8 @@ typedef DomException = DOMException;
 /// Version Change Event
 ///
 extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
+  VersionChangeEvent.fromOpen(this.event);
+
   factory VersionChangeEvent(String type, [Map? eventInitDict]) {
     if (eventInitDict != null) {
       var eventInitDict_1 = eventInitDict;
@@ -233,38 +235,38 @@ extension type IdbFactory._(IDBFactory factory) {
       return Future.error(ArgumentError(
           'Version and onUpgradeNeeded must be specified together'));
     }
-    EventHandler onBlockedInternal() {
-      if (onBlocked != null) {
-        final blocked = Event('blocked');
-        onBlocked(blocked);
-      } else {
-        return null;
-      }
-      return null;
-    }
-
-    EventHandler onUpgradeNeededInternal() {
-      if (onUpgradeNeeded != null) {
-        final upgrade = VersionChangeEvent('upgradeneeded');
-        onUpgradeNeeded(upgrade);
-      } else {
-        return null;
-      }
-      return null;
-    }
-
     try {
       IDBOpenDBRequest request;
+
       if (version != null) {
         request = factory.open(name, version);
       } else {
         request = factory.open(name);
       }
+
       request.onsuccess = ((Event _) {
-        completer.complete(Database._fromOpenRequest(request.result!));
+        completer.complete(Database._fromOpenRequest(request.result));
       }).toJS;
-      request.onblocked = onBlockedInternal();
-      request.onupgradeneeded = onUpgradeNeededInternal();
+
+      request.onblocked = ((Event e) {
+        if (onBlocked != null) {
+          onBlocked(e);
+        }
+        completer.complete();
+      }).toJS;
+
+      request.onupgradeneeded = ((IDBVersionChangeEvent e) {
+        if (onUpgradeNeeded != null) {
+          onUpgradeNeeded(VersionChangeEvent.fromOpen(e));
+        }
+        completer.complete(Database._fromOpenRequest(request.result));
+      }).toJS;
+
+      request.onerror = ((Event e) {
+        completer.completeError(
+            (e.currentTarget as IDBOpenDBRequest).error?.message as Object);
+      }).toJS;
+
       return completer.future;
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
@@ -535,7 +537,8 @@ extension type KeyRange._(IDBKeyRange keyrange) {
 /// An indexed database object for storing client-side data in web apps.
 ///
 extension type Database._(IDBDatabase database) {
-  Database._fromOpenRequest(JSAny result) : database = (result as IDBDatabase) {
+  Database._fromOpenRequest(JSAny? result)
+      : database = (result as IDBDatabase) {
     _initialiseHandlers();
   }
 
@@ -685,7 +688,7 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   }
 
   /// Stream of blocked events handled by this Database.
-  Stream<Event> get onAbort async* {
+  Stream<Event> get onBlocked async* {
     yield (_blockedValues[(this as Object)]!);
   }
 
@@ -701,6 +704,8 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   Stream<Event> get onUpgradeNeeded async* {
     yield (_upgradeNeededValues[(this as Object)]!);
   }
+
+  DOMException? get error => openRequest.error;
 }
 
 ///
@@ -863,7 +868,7 @@ extension type ObjectStore._(IDBObjectStore store) {
 // and errors out when the request errors.
 //
 Future<T> _completeRequest<T>(Request request) {
-  var completer = Completer<T>.sync();
+  final completer = Completer<T>.sync();
   request.onSuccess.listen((e) {
     T result = request.result;
     completer.complete(result);
