@@ -1,20 +1,29 @@
-// Copyright (c) 2020, the Dart project authors.  Please see the AUTHORS file
-// for details. All rights reserved. Use of this source code is governed by a
-// BSD-style license that can be found in the LICENSE file.
+/*
+ * Package : indexed_db
+ * Author : S. Hamblett <steve.hamblett@linux.com>
+ * Date   : 18/12/2024
+ * Copyright :  S.Hamblett - updates only
+ */
 
-library IndexedDB1Test;
+// Copyright (c) 2020, the Dart project authors.
+// All rights reserved. Use of this source code is governed by a
+// BSD-style license.
+
+@TestOn('browser')
+library;
 
 // ignore: deprecated_member_use
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:indexed_db/indexed_db.dart';
+import 'package:indexed_db/indexed_db.dart' as idb;
 import 'package:test/test.dart';
+import 'package:web/web.dart';
 
-const String STORE_NAME = 'TEST';
-const int VERSION = 1;
+const storeName = 'TEST';
+const int version = 1;
 
-var databaseNameIndex = 0;
+int databaseNameIndex = 0;
 String nextDatabaseName() {
   return 'Test1_${databaseNameIndex++}';
 }
@@ -24,13 +33,13 @@ Future testUpgrade() {
   var upgraded = false;
 
   // Delete any existing DBs.
-  return html.window.indexedDB!.deleteDatabase(dbName).then((_) {
-    return html.window.indexedDB!
+  return window.indexedDB!.deleteDatabase(dbName).then((_) {
+    return window.indexedDB
         .open(dbName, version: 1, onUpgradeNeeded: (e) {});
   }).then((db) {
     db.close();
   }).then((_) {
-    return html.window.indexedDB!.open(dbName, version: 2,
+    return window.indexedDB!.open(dbName, version: 2,
         onUpgradeNeeded: (e) {
       expect(e.oldVersion, 1);
       expect(e.newVersion, 2);
@@ -43,8 +52,8 @@ Future testUpgrade() {
 
 testReadWrite(key, value, matcher,
         [dbName,
-        storeName = STORE_NAME,
-        version = VERSION,
+        storeName = storeName,
+        version = version,
         stringifyResult = false]) =>
     () {
       if (dbName == null) {
@@ -56,8 +65,8 @@ testReadWrite(key, value, matcher,
       }
 
       late idb.Database db;
-      return html.window.indexedDB!.deleteDatabase(dbName).then((_) {
-        return html.window.indexedDB!
+      return window.indexedDB!.deleteDatabase(dbName).then((_) {
+        return window.indexedDB!
             .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
       }).then((idb.Database result) {
         db = result;
@@ -77,14 +86,14 @@ testReadWrite(key, value, matcher,
           expect(object, matcher);
         }
       }).whenComplete(() {
-        return html.window.indexedDB!.deleteDatabase(dbName);
+        return window.indexedDB!.deleteDatabase(dbName);
       });
     };
 
 testReadWriteTyped(key, value, matcher,
         [dbName,
-        String storeName = STORE_NAME,
-        version = VERSION,
+        String storeName = storeName,
+        version = version,
         stringifyResult = false]) =>
     () {
       if (dbName == null) {
@@ -97,8 +106,8 @@ testReadWriteTyped(key, value, matcher,
 
       late idb.Database db;
       // Delete any existing DBs.
-      return html.window.indexedDB!.deleteDatabase(dbName).then((_) {
-        return html.window.indexedDB!
+      return window.indexedDB!.deleteDatabase(dbName).then((_) {
+        return window.indexedDB!
             .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
       }).then((idb.Database result) {
         db = result;
@@ -120,7 +129,7 @@ testReadWriteTyped(key, value, matcher,
           expect(object, matcher);
         }
       }).whenComplete(() {
-        return html.window.indexedDB!.deleteDatabase(dbName);
+        return window.indexedDB!.deleteDatabase(dbName);
       });
     };
 
@@ -133,15 +142,15 @@ void testTypes(testFunction) {
   test(
       'largeInt',
       testFunction(123, 1371854424211, equals("1371854424211"), null,
-          STORE_NAME, VERSION, true));
+          storeName, version, true));
   test(
       'largeDoubleConvertedToInt',
       testFunction(123, 1371854424211.0, equals("1371854424211"), null,
-          STORE_NAME, VERSION, true));
+          storeName, version, true));
   test(
       'largeIntInMap',
       testFunction(123, {'time': 4503599627370492},
-          equals("{time: 4503599627370492}"), null, STORE_NAME, VERSION, true));
+          equals("{time: 4503599627370492}"), null, storeName, version, true));
   var now = new DateTime.now();
   test(
       'DateTime',
@@ -167,7 +176,7 @@ main() {
       var expectation = idb.IdbFactory.supported ? returnsNormally : throws;
 
       expect(() {
-        var db = html.window.indexedDB!;
+        var db = window.indexedDB!;
         db.open('random_db');
       }, expectation);
     });
