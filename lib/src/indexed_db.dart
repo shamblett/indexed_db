@@ -37,23 +37,11 @@
 ///     else
 ///       // Find an alternative.
 ///
-/// Access to the browser's IndexedDB is provided by the app's top-level
-/// [Window] object, which your code can refer to with `window.indexedDB`.
-/// So, for example,
-/// here's how to use window.indexedDB to open a database:
 ///
-///     Future open() {
-///       return window.indexedDB.open('myIndexedDB',
-///           version: 1,
-///           onUpgradeNeeded: _initializeDatabase)
-///         .then(_loadFromDB);
-///     }
-///     void _initializeDatabase(VersionChangeEvent e) {
-///       ...
-///     }
-///     Future _loadFromDB(Database db) {
-///       ...
-///     }
+/// Here's how to use IdbFactory to open a database:
+///
+///      final factory = IdbFactory();
+///      final database = await factory.open(dbName, version: 1);
 ///
 /// All data in an IndexedDB is stored within an [ObjectStore].
 /// To manipulate the database use [Transaction]s.
@@ -225,9 +213,12 @@ extension type Cursor._(IDBCursor cursor) {
 }
 
 ///
-/// Factory - named idbFactory as per the dart:indexed_db API.
+/// Factory - named IdbFactory as per the dart:indexed_db API.
 ///
-extension type idbFactory._(IDBFactory factory) {
+extension type IdbFactory._(IDBFactory factory) {
+  /// Default constructor added for ease of use.
+  IdbFactory() : factory = window.indexedDB;
+
   IDBOpenDBRequest deleteDatabase(String name) => factory.deleteDatabase(name);
 
   int cmp(Object first, Object second) =>
@@ -242,6 +233,26 @@ extension type idbFactory._(IDBFactory factory) {
       return Future.error(ArgumentError(
           'Version and onUpgradeNeeded must be specified together'));
     }
+    EventHandler onBlockedInternal() {
+      if (onBlocked != null) {
+        final blocked = Event('blocked');
+        onBlocked(blocked);
+      } else {
+        return null;
+      }
+      return null;
+    }
+
+    EventHandler onUpgradeNeededInternal() {
+      if (onUpgradeNeeded != null) {
+        final upgrade = VersionChangeEvent('upgradeneeded');
+        onUpgradeNeeded(upgrade);
+      } else {
+        return null;
+      }
+      return null;
+    }
+
     try {
       IDBOpenDBRequest request;
       if (version != null) {
@@ -252,21 +263,8 @@ extension type idbFactory._(IDBFactory factory) {
       request.onsuccess = ((Event _) {
         completer.complete(Database._fromOpenRequest(request.result!));
       }).toJS;
-      request.onblocked = ((Event e) {
-        if (onBlocked != null) {
-          onBlocked(e);
-        } else {
-          return Future.error(StateError('Request was blocked'));
-        }
-      }).toJS;
-      request.onupgradeneeded = ((VersionChangeEvent e) {
-        if (onUpgradeNeeded != null) {
-          onUpgradeNeeded(e);
-        } else {
-          return Future.error(
-              StateError('Upgrade needed, no handler supplied'));
-        }
-      }).toJS;
+      request.onblocked = onBlockedInternal();
+      request.onupgradeneeded = onUpgradeNeededInternal();
       return completer.future;
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
@@ -274,7 +272,7 @@ extension type idbFactory._(IDBFactory factory) {
   }
 
   /// Checks to see if Indexed DB is supported on the current platform.
-  bool get supported => true; // Always supported now.
+  static bool get supported => true; // Always supported now.
 }
 
 ///
