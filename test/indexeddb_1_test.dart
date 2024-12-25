@@ -28,39 +28,6 @@ String nextDatabaseName() {
   return 'Test1_${databaseNameIndex++}';
 }
 
-// Future testUpgrade() {
-//   var dbName = nextDatabaseName();
-//   var upgraded = false;
-//
-//   // Delete any existing DBs.
-//   window.indexedDB.deleteDatabase(dbName);
-//   idb.Database db;
-//
-//   // Open the database at version 1
-//   final request = window.indexedDB.open(dbName, 1);
-//   // ignore: unnecessary_lambdas, avoid_types_on_closure_parameters
-//   request.onsuccess = (((Event _) => (request.result as IDBDatabase).close());
-//   request.onsuccess = ((Event _) => completer.complete()).toJS;
-//   // ignore: avoid_types_on_closure_parameters
-//   request.onupgradeneeded = ((Event _) {
-//     (request.result! as IDBDatabase).createObjectStore(storeName);
-//   }).toJS;
-//   _databases[dbName] = (request.result as idb.Database);
-//   dbOpenRequest.result.
-//   final dbOpenRequest = window.indexedDB.open(dbName, 1);
-//   dbOpenRequest.onsuccess = ((Event _) {(dbOpenRequest.result! as IDBDatabase).close(); return null;});
-//     db.close();
-//     return window.indexedDB!.open(dbName, version: 2,
-//         onUpgradeNeeded: (e) {
-//       expect(e.oldVersion, 1);
-//       expect(e.newVersion, 2);
-//       upgraded = true;
-//     });
-//   }).then((_) {
-//     expect(upgraded, isTrue);
-//   });
-// }
-
 // testReadWrite(key, value, matcher,
 //         [dbName,
 //         storeName = storeName,
@@ -199,5 +166,52 @@ main() {
     expect(upgradeCalled, isTrue);
     expect(changeEvent.oldVersion, 0);
     expect(changeEvent.newVersion, 1);
+  });
+
+  test('Open - Version - with upgrade needed for new version', () async {
+    var upgradeCalled1 = false;
+    var upgradeCalled2 = false;
+    idb.VersionChangeEvent changeEvent1 = idb.VersionChangeEvent('V1');
+    idb.VersionChangeEvent changeEvent2 = idb.VersionChangeEvent('V2');
+    void onUpgradeNeeded1(idb.VersionChangeEvent event) {
+      upgradeCalled1 = true;
+      changeEvent1 = event;
+    }
+
+    void onUpgradeNeeded2(idb.VersionChangeEvent event) {
+      upgradeCalled2 = true;
+      changeEvent2 = event;
+    }
+
+    var dbName = nextDatabaseName();
+    final factory = idb.IdbFactory();
+
+    // Delete any existing DBs.
+    factory.deleteDatabase(dbName);
+
+    // Open the database at version 1
+    var database = await factory.open(dbName,
+        version: version, onUpgradeNeeded: onUpgradeNeeded1);
+    expect(database, isNotNull);
+    expect(database.name, dbName);
+    expect(database.version, 1);
+    expect(database.objectStoreNames, isNull);
+    expect(upgradeCalled1, isTrue);
+    expect(changeEvent1.oldVersion, 0);
+    expect(changeEvent1.newVersion, 1);
+
+    // Close this database
+    database.close();
+
+    // Open the database at version 2
+    database = await factory.open(dbName,
+        version: version + 1, onUpgradeNeeded: onUpgradeNeeded2);
+    expect(database, isNotNull);
+    expect(database.name, dbName);
+    expect(database.version, 2);
+    expect(database.objectStoreNames, isNull);
+    expect(upgradeCalled2, isTrue);
+    expect(changeEvent2.oldVersion, 1);
+    expect(changeEvent2.newVersion, 2);
   });
 }
