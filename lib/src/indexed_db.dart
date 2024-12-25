@@ -103,6 +103,8 @@ extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
   int? get oldVersion => event.oldVersion;
 
   OpenDBRequest get target => OpenDBRequest((event.target as IDBOpenDBRequest));
+
+  EventTarget? get currentTarget => event.currentTarget;
 }
 
 ///
@@ -243,7 +245,9 @@ extension type IdbFactory._(IDBFactory factory) {
       }
 
       request.onsuccess = ((Event _) {
-        completer.complete(Database._fromOpenRequest(request.result));
+        if (!completer.isCompleted) {
+          completer.complete(Database._fromOpenRequest(request.result));
+        }
       }).toJS;
 
       request.onblocked = ((Event e) {
@@ -279,6 +283,8 @@ extension type IdbFactory._(IDBFactory factory) {
 /// Transaction
 ///
 extension type Transaction._(IDBTransaction transaction) {
+  Transaction(this.transaction);
+
   Transaction._fromDatabase(this.transaction) {
     _initialiseHandlers();
   }
@@ -286,6 +292,10 @@ extension type Transaction._(IDBTransaction transaction) {
     _initialiseHandlers();
   }
   Transaction._fromRequest(this.transaction) {
+    _initialiseHandlers();
+  }
+
+  Transaction._fromOpenRequest(this.transaction) {
     _initialiseHandlers();
   }
 
@@ -531,6 +541,8 @@ extension type KeyRange._(IDBKeyRange keyrange) {
 /// An indexed database object for storing client-side data in web apps.
 ///
 extension type Database._(IDBDatabase database) {
+  Database(this.database);
+
   Database._fromOpenRequest(JSAny? result)
       : database = (result as IDBDatabase) {
     _initialiseHandlers();
@@ -603,7 +615,7 @@ extension type Database._(IDBDatabase database) {
     bool? autoIncrement,
   }) {
     final options = IDBObjectStoreParameters(
-        keyPath: keyPath.jsify(), autoIncrement: autoIncrement!);
+        keyPath: keyPath?.jsify(), autoIncrement: autoIncrement ?? false);
 
     final objectStore = database.createObjectStore(name, options);
     return ObjectStore._fromCreateRequest(objectStore);
@@ -621,7 +633,7 @@ extension type Database._(IDBDatabase database) {
     if (mode != 'readonly' && mode != 'readwrite') {
       throw ArgumentError(mode);
     }
-    final transaction = database.transaction(storeNames.toJSBox, mode);
+    final transaction = database.transaction(storeNames.jsify()!, mode);
     return Transaction._fromDatabase(transaction);
   }
 
@@ -693,6 +705,9 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   }
 
   DOMException? get error => openRequest.error;
+
+  Transaction get transaction =>
+      Transaction._fromOpenRequest(openRequest.transaction!);
 }
 
 ///

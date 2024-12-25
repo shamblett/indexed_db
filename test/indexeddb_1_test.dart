@@ -28,46 +28,6 @@ String nextDatabaseName() {
   return 'Test1_${databaseNameIndex++}';
 }
 
-// testReadWrite(key, value, matcher,
-//         [dbName,
-//         storeName = storeName,
-//         version = version,
-//         stringifyResult = false]) =>
-//     () {
-//       if (dbName == null) {
-//         dbName = nextDatabaseName();
-//       }
-//       createObjectStore(e) {
-//         idb.ObjectStore store = e.target.result.createObjectStore(storeName);
-//         expect(store, isNotNull);
-//       }
-//
-//       late idb.Database db;
-//       return window.indexedDB!.deleteDatabase(dbName).then((_) {
-//         return window.indexedDB!
-//             .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
-//       }).then((idb.Database result) {
-//         db = result;
-//         var transaction = db.transactionList([storeName], 'readwrite');
-//         transaction.objectStore(storeName).put(value, key);
-//         return transaction.completed;
-//       }).then((_) {
-//         var transaction = db.transaction(storeName, 'readonly');
-//         return transaction.objectStore(storeName).getObject(key);
-//       }).then((object) {
-//         db.close();
-//         if (stringifyResult) {
-//           // Stringify the numbers to verify that we're correctly returning ints
-//           // as ints vs doubles.
-//           expect(object.toString(), matcher);
-//         } else {
-//           expect(object, matcher);
-//         }
-//       }).whenComplete(() {
-//         return window.indexedDB!.deleteDatabase(dbName);
-//       });
-//     };
-
 // testReadWriteTyped(key, value, matcher,
 //         [dbName,
 //         String storeName = storeName,
@@ -215,5 +175,56 @@ main() {
     expect(changeEvent2.newVersion, 2);
   });
 
-  test('Read Write', () async {});
+  test('Read Write', () async {
+    var dbName = nextDatabaseName();
+    final factory = idb.IdbFactory();
+    late idb.Transaction testTransaction;
+    late idb.Database? testDatabase;
+
+    void upgradeNeeded(idb.VersionChangeEvent event) async {
+      testTransaction = event.target.transaction;
+      testDatabase = testTransaction.db;
+    }
+
+    // Delete any existing DBs.
+    factory.deleteDatabase(dbName);
+
+    // Open the database at version 1
+    var database =
+        await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
+    expect(database.name, dbName);
+    expect(database.version, 1);
+    expect(database.objectStoreNames, isNull);
+
+    // Await the completion of the version change transaction
+    await testTransaction.completed;
+
+    // Create the object store
+    final objectStore = testDatabase?.createObjectStore(storeName);
+    expect(objectStore?.name, storeName);
+
+    // Write some values using the transaction from the database
+    var transaction = testDatabase?.transactionList([storeName], 'readwrite');
+    transaction?.objectStore(storeName).put('Value', 'Key');
+    transaction?.objectStore(storeName).put(10, 'Int');
+    transaction?.objectStore(storeName).put([1, 2, 3], 'List');
+    transaction?.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
+    transaction?.objectStore(storeName).put(true, 'Bool');
+    // Await the completion of the transaction
+    await transaction?.completed;
+    // Check the values
+    var value = await transaction?.objectStore(storeName).getObject('Key');
+    expect(value, 'Value');
+    value = await transaction?.objectStore(storeName).getObject('Int');
+    expect(value, 10);
+    value = await transaction?.objectStore(storeName).getObject('List');
+    expect(value, [1, 2, 3]);
+    value = await transaction?.objectStore(storeName).getObject('Map');
+    expect(value, {'first': 1, 'second': 2});
+    value = await transaction?.objectStore(storeName).getObject('Bool');
+    expect(value, isTrue);
+    //Close the database
+    testDatabase?.close();
+    database.close();
+  });
 }
