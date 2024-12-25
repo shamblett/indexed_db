@@ -63,6 +63,7 @@ library;
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:js_interop';
 
 import 'package:web/web.dart';
@@ -130,30 +131,22 @@ extension type Request._(IDBRequest request) {
 
   DomException? get error => request.error;
 
-  static final _errorValues = Expando<Event>();
+  static final _errorValues = Queue<Event>();
 
-  EventHandler onErrorHandler() {
-    final event = Event('error');
-    _errorValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of error events handled by this Request.
+  /// Stream of error events handled by this [Request].
   Stream<Event> get onError async* {
-    yield (_errorValues[(this as Object)]!);
+    if (_errorValues.isNotEmpty) {
+      yield (_errorValues.removeFirst());
+    }
   }
 
-  static final _successValues = Expando<Event>();
+  static final _successValues = Queue<Event>();
 
-  EventHandler onSuccessHandler() {
-    final event = Event('success');
-    _successValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of success events handled by this Request.
+  /// Stream of success events handled by this [Request].
   Stream<Event> get onSuccess async* {
-    yield (_successValues[(this as Object)]!);
+    if (_successValues.isNotEmpty) {
+      yield (_successValues.removeFirst());
+    }
   }
 
   String? get readyState => request.readyState;
@@ -166,8 +159,13 @@ extension type Request._(IDBRequest request) {
       Transaction._fromRequest(request.transaction!);
 
   void _initialiseHandlers() {
-    request.onerror = onErrorHandler();
-    request.onsuccess = onSuccessHandler();
+    request.onerror = ((Event e) {
+      _errorValues.add(e);
+    }).toJS;
+
+    request.onsuccess = ((Event e) {
+      _successValues.add(e);
+    }).toJS;
   }
 }
 
@@ -301,43 +299,31 @@ extension type Transaction._(IDBTransaction transaction) {
   static const EventStreamProvider<Event> completeEvent =
       EventStreamProvider<ProgressEvent>('complete');
 
-  static final _errorValues = Expando<Event>();
+  static final _errorValues = Queue<Event>();
 
-  EventHandler onErrorHandler() {
-    final event = Event('error');
-    _errorValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of error events handled by this Request.
+  /// Stream of error events handled by this [Transaction].
   Stream<Event> get onError async* {
-    yield (_errorValues[(this as Object)]!);
+    if (_errorValues.isNotEmpty) {
+      yield (_errorValues.removeFirst());
+    }
   }
 
-  static final _abortValues = Expando<Event>();
+  static final _abortValues = Queue<Event>();
 
-  EventHandler onAbortHandler() {
-    final event = Event('abort');
-    _abortValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of abort events handled by this Request.
+  /// Stream of abort events handled by this [Transaction].
   Stream<Event> get onAbort async* {
-    yield (_abortValues[(this as Object)]!);
+    if (_abortValues.isNotEmpty) {
+      yield (_abortValues.removeFirst());
+    }
   }
 
-  static final _completeValues = Expando<Event>();
+  static final _completeValues = Queue<Event>();
 
-  EventHandler onCompleteHandler() {
-    final event = Event('complete');
-    _completeValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of complete events handled by this Request.
+  /// Stream of complete events handled by this [Transaction].
   Stream<Event> get onComplete async* {
-    yield (_completeValues[(this as Object)]!);
+    if (_completeValues.isNotEmpty) {
+      yield (_completeValues.removeFirst());
+    }
   }
 
   /// Provides a Future which will be completed once the transaction has completed.
@@ -378,9 +364,17 @@ extension type Transaction._(IDBTransaction transaction) {
       ObjectStore._fromTransaction(transaction.objectStore(name));
 
   void _initialiseHandlers() {
-    transaction.onerror = onErrorHandler();
-    transaction.onabort = onAbortHandler();
-    transaction.oncomplete = onCompleteHandler();
+    transaction.onerror = ((Event e) {
+      _errorValues.add(e);
+    }).toJS;
+
+    transaction.onabort = ((Event e) {
+      _abortValues.add(e);
+    }).toJS;
+
+    transaction.oncomplete = ((Event e) {
+      _completeValues.add(e);
+    }).toJS;
   }
 }
 
@@ -563,56 +557,40 @@ extension type Database._(IDBDatabase database) {
   List<String>? get objectStoreNames =>
       _domStringsToList(database.objectStoreNames);
 
-  static final _abortValues = Expando<Event>();
+  static final _abortValues = Queue<Event>();
 
-  EventHandler onAbortHandler() {
-    final event = Event('abort');
-    _abortValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of abort events handled by this Database.
+  /// Stream of abort events handled by this [Database].
   Stream<Event> get onAbort async* {
-    yield (_abortValues[(this as Object)]!);
+    if (_abortValues.isNotEmpty) {
+      yield (_abortValues.removeFirst());
+    }
   }
 
-  static final _closeValues = Expando<Event>();
+  static final _closeValues = Queue<Event>();
 
-  EventHandler onCloseHandler() {
-    final event = Event('close');
-    _closeValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of close events handled by this Database.
+  /// Stream of close events handled by this [Database].
   Stream<Event> get onClose async* {
-    yield _closeValues[(this as Object)]!;
+    if (_closeValues.isNotEmpty) {
+      yield (_closeValues.removeFirst());
+    }
   }
 
-  static final _errorValues = Expando<Event>();
+  static final _errorValues = Queue<Event>();
 
-  EventHandler onErrorHandler() {
-    final event = Event('error');
-    _errorValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of error events handled by this Database.
+  /// Stream of error events handled by this [Database].
   Stream<Event> get onError async* {
-    yield _errorValues[(this as Object)]!;
+    if (_errorValues.isNotEmpty) {
+      yield (_errorValues.removeFirst());
+    }
   }
 
-  static final _versionChangeValues = Expando<Event>();
-
-  EventHandler onVersionHandler() {
-    final event = Event('versionchange');
-    _versionChangeValues[(this as Object)] = event;
-    return null;
-  }
+  static final _versionChangeValues = Queue<Event>();
 
   /// Stream of version change events handled by this [Database].
   Stream<Event> get onVersionChange async* {
-    yield _versionChangeValues[(this as Object)]!;
+    if (_versionChangeValues.isNotEmpty) {
+      yield (_versionChangeValues.removeFirst());
+    }
   }
 
   int? get version => database.version;
@@ -656,9 +634,21 @@ extension type Database._(IDBDatabase database) {
   void deleteObjectStore(String name) => database.deleteObjectStore(name);
 
   void _initialiseHandlers() {
-    database.onerror = onErrorHandler();
-    database.onabort = onAbortHandler();
-    database.onclose = onCloseHandler();
+    database.onerror = ((Event e) {
+      _errorValues.add(e);
+    }).toJS;
+
+    database.onabort = ((Event e) {
+      _abortValues.add(e);
+    }).toJS;
+
+    database.onclose = ((Event e) {
+      _closeValues.add(e);
+    }).toJS;
+
+    database.onversionchange = ((Event e) {
+      _versionChangeValues.add(e);
+    }).toJS;
   }
 }
 
@@ -667,8 +657,13 @@ extension type Database._(IDBDatabase database) {
 ///
 extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   OpenDBRequest(this.openRequest) {
-    openRequest.onblocked = onBlockedHandler();
-    openRequest.onupgradeneeded = onUpgradeNeededHandler();
+    openRequest.onblocked = ((Event e) {
+      _blockedValues.add(e);
+    }).toJS;
+
+    openRequest.onupgradeneeded = ((Event e) {
+      _upgradeNeededValues.add(e);
+    }).toJS;
   }
 
   /// Static factory designed to expose events to event handlers
@@ -679,30 +674,22 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   static const EventStreamProvider<Event> upgradeNeededEvent =
       EventStreamProvider<ProgressEvent>('upgradeneeded');
 
-  static final _blockedValues = Expando<Event>();
+  static final _blockedValues = Queue<Event>();
 
-  EventHandler onBlockedHandler() {
-    final event = Event('blocked');
-    _blockedValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of blocked events handled by this Database.
+  /// Stream of blocked events handled by this [OpenDBRequest].
   Stream<Event> get onBlocked async* {
-    yield (_blockedValues[(this as Object)]!);
+    if (_blockedValues.isNotEmpty) {
+      yield (_blockedValues.removeFirst());
+    }
   }
 
-  static final _upgradeNeededValues = Expando<Event>();
+  static final _upgradeNeededValues = Queue<Event>();
 
-  EventHandler onUpgradeNeededHandler() {
-    final event = Event('upgradeNeeded');
-    _upgradeNeededValues[(this as Object)] = event;
-    return null;
-  }
-
-  /// Stream of upgrade needed events handled by this Database.
+  /// Stream of upgrade needed events handled by this [OpenDBRequest].
   Stream<Event> get onUpgradeNeeded async* {
-    yield (_upgradeNeededValues[(this as Object)]!);
+    if (_upgradeNeededValues.isNotEmpty) {
+      yield (_upgradeNeededValues.removeFirst());
+    }
   }
 
   DOMException? get error => openRequest.error;
