@@ -265,8 +265,10 @@ extension type IdbFactory._(IDBFactory factory) {
       }).toJS;
 
       request.onerror = ((Event e) {
-        completer.completeError(
-            (e.currentTarget as IDBOpenDBRequest).error?.message as Object);
+        if ( !completer.isCompleted ) {
+          completer.completeError(
+              (e.currentTarget as IDBOpenDBRequest).error?.message as Object);
+        }
       }).toJS;
 
       return completer.future;
@@ -885,7 +887,9 @@ Future<T> _completeRequest<T>(Request request) {
   final completer = Completer<T>.sync();
   request.onSuccess.listen((e) {
     T result = request.result;
-    completer.complete(result);
+    if ( !completer.isCompleted ) {
+      completer.complete(result);
+    }
   });
   request.onError.listen(completer.completeError);
   return completer.future;

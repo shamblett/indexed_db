@@ -186,18 +186,14 @@ main() {
     Future<T> runInTxn<T>(Future<T>? Function(idb.ObjectStore) requestCommand,
         [String txnMode = 'readwrite']) async {
       final trans = database.transaction(storeName, txnMode);
-      trans.core.oncomplete = ((Event e) {
-        print("TX complete called");
-      }).toJS;
       final store = trans.objectStore(storeName);
-      final result = await requestCommand(store)!;
-      trans.commit();
+      final result = requestCommand(store)!;
       await trans.completed;
       return result;
     }
 
     Future<dynamic> save(String obj, String key) => runInTxn<dynamic>(
-        (idb.ObjectStore store) async => store.put(obj, key));
+        (idb.ObjectStore store) async => await store.put(obj, key));
 
     Future<dynamic> getByKey(String key) => runInTxn<dynamic>(
         (dynamic store) async => await store.getObject(key), 'readonly');
@@ -205,7 +201,7 @@ main() {
     void onUpgradeNeeded(idb.VersionChangeEvent event) async {
       database = (event.currentTarget as idb.OpenDBRequest).database;
       objectStore = database.createObjectStore(storeName);
-      var key = await save('Value', 'Key');
+      var key = await objectStore.put('Value', 'Key');
       print('HHHkkk $key');
       value = await getByKey('Key');
       print('HHH $value');
