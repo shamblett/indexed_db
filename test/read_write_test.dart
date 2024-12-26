@@ -14,6 +14,7 @@ library;
 
 // ignore: deprecated_member_use
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:math' as math;
 
 import 'package:indexed_db/indexed_db.dart' as idb;
@@ -29,29 +30,37 @@ String nextDatabaseName() {
 }
 
 testReadWrite(key, value, matcher,
-    [dbName,
-      storeName = STORE_NAME,
-      version = VERSION,
-      stringifyResult = false]) =>
-        () {
-      if (dbName == null) {
-        dbName = nextDatabaseName();
-      }
+        [dbName,
+        storeName = storeName,
+        version = version,
+        stringifyResult = false]) =>
+    () async {
+      late idb.Database db;
+      dbName ??= nextDatabaseName();
       createObjectStore(e) {
         idb.ObjectStore store = e.target.result.createObjectStore(storeName);
         expect(store, isNotNull);
       }
 
-      late idb.Database db;
-      return html.window.indexedDB!.deleteDatabase(dbName).then((_) {
-        return html.window.indexedDB!
-            .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
-      }).then((idb.Database result) {
-        db = result;
-        var transaction = db.transactionList([storeName], 'readwrite');
-        transaction.objectStore(storeName).put(value, key);
-        return transaction.completed;
-      }).then((_) {
+      Future<void> open() async {
+        final completer = Completer<void>();
+
+        final request = window.indexedDB.open(dbName);
+        // ignore: unnecessary_lambdas, avoid_types_on_closure_parameters
+        request.onsuccess = ((Event _) {
+          db = (request.result as idb.Database);
+          completer.complete();
+        }).toJS;
+        // ignore: avoid_types_on_closure_parameters
+        request.onupgradeneeded = ((Event _) {
+          db.createObjectStore(storeName);
+        }).toJS;
+        await completer.future;
+      }
+
+      await open();
+      var transaction = db.transactionList([storeName], 'readwrite');
+      transaction.objectStore(storeName).put(value, key).then((_) {
         var transaction = db.transaction(storeName, 'readonly');
         return transaction.objectStore(storeName).getObject(key);
       }).then((object) {
@@ -64,7 +73,7 @@ testReadWrite(key, value, matcher,
           expect(object, matcher);
         }
       }).whenComplete(() {
-        return html.window.indexedDB!.deleteDatabase(dbName);
+        window.indexedDB.deleteDatabase(dbName);
       });
     };
 
@@ -76,24 +85,24 @@ void testTypes(testFunction) {
   test('bool', testFunction(123, [true, false], equals([true, false])));
   test(
       'largeInt',
-      testFunction(123, 1371854424211, equals("1371854424211"), null,
-          STORE_NAME, VERSION, true));
+      testFunction(123, 1371854424211, equals("1371854424211"), null, storeName,
+          version, true));
   test(
       'largeDoubleConvertedToInt',
       testFunction(123, 1371854424211.0, equals("1371854424211"), null,
-          STORE_NAME, VERSION, true));
+          storeName, version, true));
   test(
       'largeIntInMap',
       testFunction(123, {'time': 4503599627370492},
-          equals("{time: 4503599627370492}"), null, STORE_NAME, VERSION, true));
-  var now = new DateTime.now();
+          equals("{time: 4503599627370492}"), null, storeName, version, true));
+  var now = DateTime.now();
   test(
       'DateTime',
       testFunction(
           123,
           now,
-          predicate((date) =>
-          date.millisecondsSinceEpoch == now.millisecondsSinceEpoch)));
+          predicate((DateTime date) =>
+              date.millisecondsSinceEpoch == now.millisecondsSinceEpoch)));
 }
 
 main() {

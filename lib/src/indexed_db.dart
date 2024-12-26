@@ -373,6 +373,10 @@ extension type Transaction._(IDBTransaction transaction) {
   ObjectStore objectStore(String name) =>
       ObjectStore._fromTransaction(transaction.objectStore(name));
 
+  IDBTransaction get core => transaction;
+
+  void commit() => transaction.commit();
+
   void _initialiseHandlers() {
     transaction.onerror = ((Event e) {
       _errorValues.add(e);
@@ -708,6 +712,14 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
 
   Transaction get transaction =>
       Transaction._fromOpenRequest(openRequest.transaction!);
+
+  JSAny? get result => openRequest.result;
+
+  ///
+  /// Get the database created by the open request
+  /// Convenience function, use only you know the context of what you are
+  /// doing, i.e a database open request.
+  Database get database => result as Database;
 }
 
 ///
@@ -905,13 +917,16 @@ Stream<T> _cursorStreamFromResult<T extends Cursor>(
 //
 // Helper function for DOM String Lists
 //
-List<String>? _domStringsToList(DOMStringList strings) {
+List<String>? _domStringsToList(DOMStringList? strings) {
+  if (strings == null) {
+    return null;
+  }
   final length = strings.length;
   if (length == 0) {
     return null;
   }
   final res = <String>[];
-  for (int i = 0; i <= length; i++) {
+  for (int i = 0; i < length; i++) {
     res.add(strings.item(i)!);
   }
   return res;
