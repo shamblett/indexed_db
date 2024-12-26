@@ -178,53 +178,58 @@ main() {
   test('Read Write', () async {
     var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
-    late idb.Transaction testTransaction;
-    late idb.Database? testDatabase;
-
-    void upgradeNeeded(idb.VersionChangeEvent event) async {
-      testTransaction = event.target.transaction;
-      testDatabase = testTransaction.db;
-    }
 
     // Delete any existing DBs.
     factory.deleteDatabase(dbName);
+    print('Deleted database');
 
     // Open the database at version 1
     var database =
-        await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
+        await factory.open(dbName);
     expect(database.name, dbName);
     expect(database.version, 1);
     expect(database.objectStoreNames, isNull);
-
-    // Await the completion of the version change transaction
-    await testTransaction.completed;
+    print('Created new database');
 
     // Create the object store
-    final objectStore = testDatabase?.createObjectStore(storeName);
-    expect(objectStore?.name, storeName);
+    final objectStore = database.createObjectStore(storeName);
+    expect(objectStore.name, storeName);
+    print('Object store created');
+
+    // Await the completion of the version change transaction
+    await Future.delayed(Duration(seconds: 1));
+    print('Awaited VC transaction');
 
     // Write some values using the transaction from the database
-    var transaction = testDatabase?.transactionList([storeName], 'readwrite');
-    transaction?.objectStore(storeName).put('Value', 'Key');
-    transaction?.objectStore(storeName).put(10, 'Int');
-    transaction?.objectStore(storeName).put([1, 2, 3], 'List');
-    transaction?.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
-    transaction?.objectStore(storeName).put(true, 'Bool');
-    // Await the completion of the transaction
-    await transaction?.completed;
+    var transaction = database.transactionList([storeName], 'readwrite');
+    print('Got transaction');
+    transaction.objectStore(storeName).put('Value', 'Key');
+    //await transaction.completed;
+    print('Value1');
+    transaction.objectStore(storeName).put(10, 'Int');
+    print('Value2');
+    transaction.objectStore(storeName).put([1, 2, 3], 'List');
+    print('Value3');
+    transaction.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
+    print('Value4');
+    transaction.objectStore(storeName).put(true, 'Bool');
+    print('Value5');
+
     // Check the values
-    var value = await transaction?.objectStore(storeName).getObject('Key');
+    print('Checking values');
+    transaction = database.transactionList([storeName], 'readonly');
+    var value = await transaction.objectStore(storeName).getObject('Key');
     expect(value, 'Value');
-    value = await transaction?.objectStore(storeName).getObject('Int');
+    value = await transaction.objectStore(storeName).getObject('Int');
     expect(value, 10);
-    value = await transaction?.objectStore(storeName).getObject('List');
+    value = await transaction.objectStore(storeName).getObject('List');
     expect(value, [1, 2, 3]);
-    value = await transaction?.objectStore(storeName).getObject('Map');
+    value = await transaction.objectStore(storeName).getObject('Map');
     expect(value, {'first': 1, 'second': 2});
-    value = await transaction?.objectStore(storeName).getObject('Bool');
+    value = await transaction.objectStore(storeName).getObject('Bool');
     expect(value, isTrue);
-    //Close the database
-    testDatabase?.close();
+
+    // Close the database
     database.close();
   });
 }

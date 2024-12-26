@@ -341,15 +341,15 @@ extension type Transaction._(IDBTransaction transaction) {
   Future<Database> get completed {
     final completer = Completer<Database>();
 
-    onComplete.first.then((_) {
+    onComplete.listen((_) {
       completer.complete(Database._fromTransaction(transaction.db));
     });
 
-    onError.first.then((e) {
+    onError.listen((e) {
       completer.completeError(e);
     });
 
-    onAbort.first.then((e) {
+    onAbort.listen((e) {
       // Avoid completing twice if an error occurs.
       if (!completer.isCompleted) {
         completer.completeError(e);
