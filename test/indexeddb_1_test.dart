@@ -23,49 +23,6 @@ String nextDatabaseName() {
   return 'Test1_${databaseNameIndex++}';
 }
 
-// testReadWriteTyped(key, value, matcher,
-//         [dbName,
-//         String storeName = storeName,
-//         version = version,
-//         stringifyResult = false]) =>
-//     () {
-//       if (dbName == null) {
-//         dbName = nextDatabaseName();
-//       }
-//       void createObjectStore(e) {
-//         var store = e.target.result.createObjectStore(storeName);
-//         expect(store, isNotNull);
-//       }
-//
-//       late idb.Database db;
-//       // Delete any existing DBs.
-//       return window.indexedDB!.deleteDatabase(dbName).then((_) {
-//         return window.indexedDB!
-//             .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
-//       }).then((idb.Database result) {
-//         db = result;
-//         idb.Transaction transaction =
-//             db.transactionList([storeName], 'readwrite');
-//         transaction.objectStore(storeName).put(value, key);
-//
-//         return transaction.completed;
-//       }).then((idb.Database result) {
-//         idb.Transaction transaction = db.transaction(storeName, 'readonly');
-//         return transaction.objectStore(storeName).getObject(key);
-//       }).then((object) {
-//         db.close();
-//         if (stringifyResult) {
-//           // Stringify the numbers to verify that we're correctly returning ints
-//           // as ints vs doubles.
-//           expect(object.toString(), matcher);
-//         } else {
-//           expect(object, matcher);
-//         }
-//       }).whenComplete(() {
-//         return window.indexedDB!.deleteDatabase(dbName);
-//       });
-//     };
-
 main() {
   test('Supported', () {
     expect(idb.IdbFactory.supported, true);
