@@ -12,14 +12,8 @@
 @TestOn('browser')
 library;
 
-// ignore: deprecated_member_use
-import 'dart:async';
-import 'dart:js_interop';
-import 'dart:math' as math;
-
 import 'package:indexed_db/indexed_db.dart' as idb;
 import 'package:test/test.dart';
-import 'package:web/web.dart';
 
 const storeName = 'TEST';
 const int version = 1;
@@ -179,33 +173,11 @@ main() {
   test('Read Write', () async {
     var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
-    late idb.Database database;
     late idb.ObjectStore objectStore;
-    dynamic value;
-
-    Future<T> runInTxn<T>(Future<T>? Function(idb.ObjectStore) requestCommand,
-        [String txnMode = 'readwrite']) async {
-      final trans = database.transaction(storeName, txnMode);
-      final store = trans.objectStore(storeName);
-      final result = requestCommand(store)!;
-      await trans.completed;
-      return result;
-    }
-
-    Future<dynamic> save(String obj, String key) => runInTxn<dynamic>(
-        (idb.ObjectStore store) async => await store.put(obj, key));
-
-    Future<dynamic> getByKey(String key) => runInTxn<dynamic>(
-        (dynamic store) async => await store.getObject(key), 'readonly');
 
     void onUpgradeNeeded(idb.VersionChangeEvent event) async {
-      database = (event.currentTarget as idb.OpenDBRequest).database;
+      final database = event.target.database;
       objectStore = database.createObjectStore(storeName);
-      var key = await objectStore.put('Value', 'Key');
-      print('HHHkkk $key');
-      value = await getByKey('Key');
-      print('HHH $value');
-      expect(value, 'Value');
     }
 
     // Delete any existing DBs.
@@ -213,49 +185,42 @@ main() {
     print('Deleted database');
 
     // Open the database at version 1
-    await factory.open(dbName,
+    final database = await factory.open(dbName,
         version: version, onUpgradeNeeded: onUpgradeNeeded);
     expect(database.name, dbName);
     expect(database.version, 1);
     expect(database.objectStoreNames, [storeName]);
     print('Created new database');
-
     expect(objectStore.name, storeName);
 
-    // Await the completion of the version change transaction
-    //await Future.delayed(Duration(seconds: 1));
-    //print('Awaited VC transaction');
-    // print('Checking value 1');
-    // value.then((val) {
-    //   print('Checking value');
-    //   expect(value, 'Value');
-    // });
-    // Write some values using the transaction from the database
-    //await save('Value', 'Key');
-    // transaction.objectStore(storeName).put(10, 'Int');
-    // print('Value2');
-    // transaction.objectStore(storeName).put([1, 2, 3], 'List');
-    // print('Value3');
-    // // transaction.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
-    // // print('Value4');
-    // transaction.objectStore(storeName).put(true, 'Bool');
-    // print('Value5');
+    // Write some values using the transaction from the database;
+    var transaction = database.transactionList([storeName], 'readwrite');
+    transaction.objectStore(storeName).put('Value', 'Key');
+    print('Value1');
+    transaction.objectStore(storeName).put(10, 'Int');
+    print('Value2');
+    transaction.objectStore(storeName).put([1, 2, 3], 'List');
+    print('Value3');
+    transaction.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
+    print('Value4');
+    transaction.objectStore(storeName).put(true, 'Bool');
+    print('Value5');
+    await transaction.completed;
 
     // Check the values
-    // print('Checking values');
-    // transaction = database.transactionList([storeName], 'readonly');
-    // //var value = await transaction.objectStore(storeName).getObject('Key');
-    // var value = await objectStore.getObject('Key');
-    // expect(value, 'Value');
-    // value = await transaction.objectStore(storeName).getObject('Int');
-    // expect(value, 10);
-    // value = await transaction.objectStore(storeName).getObject('List');
-    // expect(value, [1, 2, 3]);
-    // value = await transaction.objectStore(storeName).getObject('Map');
-    // expect(value, {'first': 1, 'second': 2});
-    // value = await transaction.objectStore(storeName).getObject('Bool');
-    // expect(value, isTrue);
-    await Future.delayed(Duration(seconds: 10));
+    print('Checking values');
+    transaction = database.transactionList([storeName], 'readonly');
+    var value = await transaction.objectStore(storeName).getObject('Key');
+    expect(value, 'Value');
+    value = await transaction.objectStore(storeName).getObject('Int');
+    expect(value, 10);
+    value = await transaction.objectStore(storeName).getObject('List');
+    expect(value, [1, 2, 3]);
+    value = await transaction.objectStore(storeName).getObject('Map');
+    expect(value, {'first': 1, 'second': 2});
+    value = await transaction.objectStore(storeName).getObject('Bool');
+    expect(value, isTrue);
+
     // Close the database
     database.close();
   });

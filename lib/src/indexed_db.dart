@@ -563,6 +563,9 @@ extension type Database._(IDBDatabase database) implements EventTarget {
 
   void deleteObjectStore(String name) => database.deleteObjectStore(name);
 
+  List<String>? get objectStoreNames =>
+      _domStringsToList(database.objectStoreNames);
+
   /// Allows access to the underlying IDB interface.
   IDBDatabase get idbObject => database;
 }
