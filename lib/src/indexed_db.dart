@@ -63,7 +63,6 @@ library;
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:js_interop';
 
 import 'package:web/web.dart';
@@ -92,36 +91,26 @@ extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
   static VersionChangeEvent _create_2(type) =>
       (IDBVersionChangeEvent(type) as VersionChangeEvent);
 
-  @Deprecated('dataLoss no longer supported on IDBVersionChangeEvent')
-  String? get dataLoss => 'Not Implemented';
-
-  @Deprecated('dataLossMessage no longer supported on IDBVersionChangeEvent')
-  String? get dataLossMessage => 'Not Implemented';
-
   int? get newVersion => event.newVersion;
 
   int? get oldVersion => event.oldVersion;
 
-  OpenDBRequest get target => OpenDBRequest((event.target as IDBOpenDBRequest));
+  OpenDBRequest get target =>
+      OpenDBRequest._fromVersionChangeRequest(event.target as IDBOpenDBRequest);
 
-  EventTarget? get currentTarget => event.currentTarget;
+  /// Allows access to the underlying IDB interface.
+  IDBVersionChangeEvent get idbObject => event;
 }
 
 ///
 /// Request
 ///
-extension type Request._(IDBRequest request) {
-  Request._fromObjectStore(this.request) {
-    _initialiseHandlers();
-  }
+extension type Request._(IDBRequest request) implements EventTarget {
+  Request._fromObjectStore(this.request);
 
-  Request._fromCursor(this.request) {
-    _initialiseHandlers();
-  }
+  Request._fromCursor(this.request);
 
-  Request._fromIndex(this.request) {
-    _initialiseHandlers();
-  }
+  Request._fromIndex(this.request);
 
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
@@ -133,23 +122,11 @@ extension type Request._(IDBRequest request) {
 
   DomException? get error => request.error;
 
-  static final _errorValues = Queue<Event>();
-
   /// Stream of error events handled by this [Request].
-  Stream<Event> get onError async* {
-    if (_errorValues.isNotEmpty) {
-      yield (_errorValues.removeFirst());
-    }
-  }
-
-  static final _successValues = Queue<Event>();
+  Stream<Event> get onError => errorEvent.forTarget(this);
 
   /// Stream of success events handled by this [Request].
-  Stream<Event> get onSuccess async* {
-    if (_successValues.isNotEmpty) {
-      yield (_successValues.removeFirst());
-    }
-  }
+  Stream<Event> get onSuccess => successEvent.forTarget(this);
 
   String? get readyState => request.readyState;
 
@@ -160,15 +137,8 @@ extension type Request._(IDBRequest request) {
   Transaction? get transaction =>
       Transaction._fromRequest(request.transaction!);
 
-  void _initialiseHandlers() {
-    request.onerror = ((Event e) {
-      _errorValues.add(e);
-    }).toJS;
-
-    request.onsuccess = ((Event e) {
-      _successValues.add(e);
-    }).toJS;
-  }
+  /// Allows access to the underlying IDB interface.
+  IDBRequest get idbObject => request;
 }
 
 ///
@@ -212,13 +182,15 @@ extension type Cursor._(IDBCursor cursor) {
       return Future.error(e, stacktrace);
     }
   }
+
+  /// Allows access to the underlying IDB interface.
+  IDBCursor get idbObject => cursor;
 }
 
 ///
 /// Factory - named IdbFactory as per the dart:indexed_db API.
 ///
 extension type IdbFactory._(IDBFactory factory) {
-  /// Default constructor added for ease of use.
   IdbFactory() : factory = window.indexedDB;
 
   IDBOpenDBRequest deleteDatabase(String name) => factory.deleteDatabase(name);
@@ -254,7 +226,6 @@ extension type IdbFactory._(IDBFactory factory) {
         if (onBlocked != null) {
           onBlocked(e);
         }
-        completer.complete();
       }).toJS;
 
       request.onupgradeneeded = ((IDBVersionChangeEvent e) {
@@ -265,7 +236,7 @@ extension type IdbFactory._(IDBFactory factory) {
       }).toJS;
 
       request.onerror = ((Event e) {
-        if ( !completer.isCompleted ) {
+        if (!completer.isCompleted) {
           completer.completeError(
               (e.currentTarget as IDBOpenDBRequest).error?.message as Object);
         }
@@ -279,27 +250,23 @@ extension type IdbFactory._(IDBFactory factory) {
 
   /// Checks to see if Indexed DB is supported on the current platform.
   static bool get supported => true; // Always supported now.
+
+  /// Allows access to the underlying IDB interface.
+  IDBFactory get idbObject => factory;
 }
 
 ///
 /// Transaction
 ///
-extension type Transaction._(IDBTransaction transaction) {
-  Transaction(this.transaction);
+extension type Transaction._(IDBTransaction transaction)
+    implements EventTarget {
+  Transaction._fromDatabase(this.transaction);
 
-  Transaction._fromDatabase(this.transaction) {
-    _initialiseHandlers();
-  }
-  Transaction._fromObjectStore(this.transaction) {
-    _initialiseHandlers();
-  }
-  Transaction._fromRequest(this.transaction) {
-    _initialiseHandlers();
-  }
+  Transaction._fromObjectStore(this.transaction);
 
-  Transaction._fromOpenRequest(this.transaction) {
-    _initialiseHandlers();
-  }
+  Transaction._fromRequest(this.transaction);
+
+  Transaction._fromOpenRequest(this.transaction);
 
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
@@ -311,32 +278,14 @@ extension type Transaction._(IDBTransaction transaction) {
   static const EventStreamProvider<Event> completeEvent =
       EventStreamProvider<ProgressEvent>('complete');
 
-  static final _errorValues = Queue<Event>();
-
   /// Stream of error events handled by this [Transaction].
-  Stream<Event> get onError async* {
-    if (_errorValues.isNotEmpty) {
-      yield (_errorValues.removeFirst());
-    }
-  }
-
-  static final _abortValues = Queue<Event>();
+  Stream<Event> get onError => errorEvent.forTarget(this);
 
   /// Stream of abort events handled by this [Transaction].
-  Stream<Event> get onAbort async* {
-    if (_abortValues.isNotEmpty) {
-      yield (_abortValues.removeFirst());
-    }
-  }
-
-  static final _completeValues = Queue<Event>();
+  Stream<Event> get onAbort => abortEvent.forTarget(this);
 
   /// Stream of complete events handled by this [Transaction].
-  Stream<Event> get onComplete async* {
-    if (_completeValues.isNotEmpty) {
-      yield (_completeValues.removeFirst());
-    }
-  }
+  Stream<Event> get onComplete => completeEvent.forTarget(this);
 
   /// Provides a Future which will be completed once the transaction has completed.
   /// The future will error if an error occurs on the transaction or if the transaction is aborted.
@@ -379,19 +328,8 @@ extension type Transaction._(IDBTransaction transaction) {
 
   void commit() => transaction.commit();
 
-  void _initialiseHandlers() {
-    transaction.onerror = ((Event e) {
-      _errorValues.add(e);
-    }).toJS;
-
-    transaction.onabort = ((Event e) {
-      _abortValues.add(e);
-    }).toJS;
-
-    transaction.oncomplete = ((Event e) {
-      _completeValues.add(e);
-    }).toJS;
-  }
+  /// Allows access to the underlying IDB interface.
+  IDBTransaction get idbObject => transaction;
 }
 
 ///
@@ -493,6 +431,9 @@ extension type Index._(IDBIndex index) {
     }
     return _cursorStreamFromResult(request, autoAdvance);
   }
+
+  /// Allows access to the underlying IDB interface.
+  IDBIndex get idbObject => index;
 }
 
 ///
@@ -539,6 +480,9 @@ extension type KeyRange._(IDBKeyRange keyrange) {
 
   static KeyRange upperBound_(Object bound, [bool? open]) =>
       KeyRange.upperBound(bound, open ?? false);
+
+  /// Allows access to the underlying IDB interface.
+  IDBKeyRange get idbObject => keyrange;
 }
 
 ///
@@ -546,17 +490,12 @@ extension type KeyRange._(IDBKeyRange keyrange) {
 ///
 /// An indexed database object for storing client-side data in web apps.
 ///
-extension type Database._(IDBDatabase database) {
+extension type Database._(IDBDatabase database) implements EventTarget {
   Database(this.database);
 
-  Database._fromOpenRequest(JSAny? result)
-      : database = (result as IDBDatabase) {
-    _initialiseHandlers();
-  }
+  Database._fromOpenRequest(JSAny? result) : database = (result as IDBDatabase);
 
-  Database._fromTransaction(this.database) {
-    _initialiseHandlers();
-  }
+  Database._fromTransaction(this.database);
 
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
@@ -572,44 +511,17 @@ extension type Database._(IDBDatabase database) {
 
   String? get name => database.name;
 
-  List<String>? get objectStoreNames =>
-      _domStringsToList(database.objectStoreNames);
-
-  static final _abortValues = Queue<Event>();
-
   /// Stream of abort events handled by this [Database].
-  Stream<Event> get onAbort async* {
-    if (_abortValues.isNotEmpty) {
-      yield (_abortValues.removeFirst());
-    }
-  }
-
-  static final _closeValues = Queue<Event>();
+  Stream<Event> get onAbort => abortEvent.forTarget(this);
 
   /// Stream of close events handled by this [Database].
-  Stream<Event> get onClose async* {
-    if (_closeValues.isNotEmpty) {
-      yield (_closeValues.removeFirst());
-    }
-  }
-
-  static final _errorValues = Queue<Event>();
+  Stream<Event> get onClose => closeEvent.forTarget(this);
 
   /// Stream of error events handled by this [Database].
-  Stream<Event> get onError async* {
-    if (_errorValues.isNotEmpty) {
-      yield (_errorValues.removeFirst());
-    }
-  }
-
-  static final _versionChangeValues = Queue<Event>();
+  Stream<Event> get onError => errorEvent.forTarget(this);
 
   /// Stream of version change events handled by this [Database].
-  Stream<Event> get onVersionChange async* {
-    if (_versionChangeValues.isNotEmpty) {
-      yield (_versionChangeValues.removeFirst());
-    }
-  }
+  Stream<Event> get onVersionChange => versionChangeEvent.forTarget(this);
 
   int? get version => database.version;
 
@@ -651,38 +563,16 @@ extension type Database._(IDBDatabase database) {
 
   void deleteObjectStore(String name) => database.deleteObjectStore(name);
 
-  void _initialiseHandlers() {
-    database.onerror = ((Event e) {
-      _errorValues.add(e);
-    }).toJS;
-
-    database.onabort = ((Event e) {
-      _abortValues.add(e);
-    }).toJS;
-
-    database.onclose = ((Event e) {
-      _closeValues.add(e);
-    }).toJS;
-
-    database.onversionchange = ((Event e) {
-      _versionChangeValues.add(e);
-    }).toJS;
-  }
+  /// Allows access to the underlying IDB interface.
+  IDBDatabase get idbObject => database;
 }
 
 ///
 /// Open DB Request
 ///
-extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
-  OpenDBRequest(this.openRequest) {
-    openRequest.onblocked = ((Event e) {
-      _blockedValues.add(e);
-    }).toJS;
-
-    openRequest.onupgradeneeded = ((Event e) {
-      _upgradeNeededValues.add(e);
-    }).toJS;
-  }
+extension type OpenDBRequest._(IDBOpenDBRequest openrequest)
+    implements EventTarget {
+  OpenDBRequest._fromVersionChangeRequest(this.openrequest);
 
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
@@ -692,36 +582,27 @@ extension type OpenDBRequest._(IDBOpenDBRequest openRequest) {
   static const EventStreamProvider<Event> upgradeNeededEvent =
       EventStreamProvider<ProgressEvent>('upgradeneeded');
 
-  static final _blockedValues = Queue<Event>();
-
   /// Stream of blocked events handled by this [OpenDBRequest].
-  Stream<Event> get onBlocked async* {
-    if (_blockedValues.isNotEmpty) {
-      yield (_blockedValues.removeFirst());
-    }
-  }
-
-  static final _upgradeNeededValues = Queue<Event>();
+  Stream<Event> get onBlocked => blockedEvent.forTarget(this);
 
   /// Stream of upgrade needed events handled by this [OpenDBRequest].
-  Stream<Event> get onUpgradeNeeded async* {
-    if (_upgradeNeededValues.isNotEmpty) {
-      yield (_upgradeNeededValues.removeFirst());
-    }
-  }
+  Stream<Event> get onUpgradeNeeded => upgradeNeededEvent.forTarget(this);
 
-  DOMException? get error => openRequest.error;
+  DOMException? get error => openrequest.error;
 
   Transaction get transaction =>
-      Transaction._fromOpenRequest(openRequest.transaction!);
+      Transaction._fromOpenRequest(openrequest.transaction!);
 
-  JSAny? get result => openRequest.result;
+  JSAny? get result => openrequest.result;
 
   ///
   /// Get the database created by the open request
   /// Convenience function, use only you know the context of what you are
   /// doing, i.e a database open request.
-  Database get database => result as Database;
+  Database get database => Database._fromOpenRequest(result);
+
+  /// Allows access to the underlying IDB interface.
+  IDBOpenDBRequest get idbObject => openrequest;
 }
 
 ///
@@ -877,6 +758,9 @@ extension type ObjectStore._(IDBObjectStore store) {
       return Future.error(e, stacktrace);
     }
   }
+
+  /// Allows access to the underlying IDB interface.
+  IDBObjectStore get idbObject => store;
 }
 
 //
@@ -884,12 +768,10 @@ extension type ObjectStore._(IDBObjectStore store) {
 // and errors out when the request errors.
 //
 Future<T> _completeRequest<T>(Request request) {
-  final completer = Completer<T>.sync();
+  var completer = Completer<T>.sync();
   request.onSuccess.listen((e) {
     T result = request.result;
-    if ( !completer.isCompleted ) {
-      completer.complete(result);
-    }
+    completer.complete(result);
   });
   request.onError.listen(completer.completeError);
   return completer.future;
