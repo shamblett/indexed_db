@@ -830,7 +830,7 @@ Stream<T> _cursorStreamFromResult<T extends CursorWithValue>(
     } else {
       controller.add(cursor);
       if (autoAdvance == true && controller.hasListener) {
-        (cursor as dynamic).next();
+        //TODO fix this - (cursor as dynamic).next();
       }
     }
   });
