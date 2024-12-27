@@ -5,10 +5,6 @@
  * Copyright :  S.Hamblett - updates only
  */
 
-// Copyright (c) 2020, the Dart project authors.
-// All rights reserved. Use of this source code is governed by a
-// BSD-style license.
-
 @TestOn('browser')
 library;
 
