@@ -128,24 +128,20 @@ main() {
   test('Read Write', () async {
     var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
-    late idb.ObjectStore objectStore;
-
-    void onUpgradeNeeded(idb.VersionChangeEvent event) async {
-      final database = event.target.database;
-      objectStore = database.createObjectStore(storeName);
-    }
 
     // Delete any existing DBs.
     factory.deleteDatabase(dbName);
     print('Deleted database');
 
     // Open the database at version 1
-    final database = await factory.open(dbName,
-        version: version, onUpgradeNeeded: onUpgradeNeeded);
+    final database = await factory.open(dbName);
     expect(database.name, dbName);
     expect(database.version, 1);
-    expect(database.objectStoreNames, [storeName]);
+
+    // Create the object store
+    final objectStore = database.createObjectStore(storeName);
     expect(objectStore.name, storeName);
+    expect(database.objectStoreNames, [storeName]);
 
     await Future.delayed(Duration(seconds: 1));
 
