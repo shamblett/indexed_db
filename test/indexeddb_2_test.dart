@@ -2,132 +2,111 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library IndexedDB1Test;
+library;
 
-// ignore: deprecated_member_use
+// ignore_for_file: camel_case_types
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
-import 'dart:collection';
-import 'dart:js_interop';
 
 import 'package:indexed_db/indexed_db.dart' as idb;
 import 'package:test/test.dart';
 
-// Write and re-read Maps: simple Maps; Maps with DAGs; Maps with cycles.
+// Read with cursor tests
 
-const String DB_NAME = 'Test2';
-const String STORE_NAME = 'TEST';
-const int VERSION = 1;
+const String dbName = 'Test3';
+const String storeName = 'TEST';
+const int version = 1;
 
-testReadWrite(key, value, check,
-    [dbName = DB_NAME, storeName = STORE_NAME, version = VERSION]) async {
-  void createObjectStore(e) {
-    idb.ObjectStore store = e.target.result.createObjectStore(storeName);
-    expect(store, isNotNull);
-  }
+Future<idb.Database> createAndOpenDb() async {
+  final factory = idb.IdbFactory();
 
-  idb.Database? db;
   // Delete any existing DBs.
-  try {
-    await html.window.indexedDB!.deleteDatabase(dbName);
-    db = await html.window.indexedDB!
-        .open(dbName, version: version, onUpgradeNeeded: createObjectStore);
+  factory.deleteDatabase(dbName);
 
-    idb.Transaction transaction = db.transactionList([storeName], 'readwrite');
-    transaction.objectStore(storeName).put(value, key);
+  // Open the database at version 1
+  final database = await factory.open(dbName);
 
-    db = await transaction.completed;
-    transaction = db.transaction(storeName, 'readonly');
-    var object = await transaction.objectStore(storeName).getObject(key);
+  // Create the object store
+  database.createObjectStore(storeName);
 
-    db.close();
-    check(value, object);
-  } catch (error) {
-    if (db != null) {
-      db.close();
-    }
-    throw error;
-  }
+  // Allow the version change transaction to complete, should be needed only in unit testing.
+  await Future.delayed(Duration(seconds: 1));
+
+  return database;
 }
 
-List<String> get nonNativeListData {
-  List<String> list = [];
-  list.add("data");
-  list.add("clone");
-  list.add("error");
-  list.add("test");
-  return list;
+Future<idb.Database> writeItems(idb.Database db) {
+  Future<Object> write(index) {
+    var transaction = db.transaction(storeName, 'readwrite');
+    transaction.objectStore(storeName).put('Item $index', index);
+    return transaction.completed;
+  }
+
+  var future = write(0);
+  for (var i = 1; i < 100; ++i) {
+    future = future.then((_) => write(i));
+  }
+
+  // Chain on the DB so we return it at the end.
+  return future.then((_) => db);
+}
+
+Future<idb.Database> setupDb() {
+  return createAndOpenDb().then(writeItems);
+}
+
+Future<idb.Database> readAllViaCursor(idb.Database db) {
+  idb.Transaction txn = db.transaction(storeName, 'readonly');
+  idb.ObjectStore objectStore = txn.objectStore(storeName);
+  int itemCount = 0;
+  int sumKeys = 0;
+  Object? lastKey;
+
+  var cursors = objectStore.openCursor().asBroadcastStream();
+  cursors.listen((cursor) {
+    ++itemCount;
+    lastKey = cursor.key;
+    sumKeys += cursor.key as int;
+    expect(cursor.value, 'Item ${cursor.key}');
+    cursor.next();
+  });
+  cursors.last.then((cursor) {
+    expect(lastKey, 99);
+    expect(sumKeys, (100 * 99) ~/ 2);
+    expect(itemCount, 100);
+  });
+
+  return cursors.last.then((_) => db);
+}
+
+Future<idb.Database> readAllReversedViaCursor(idb.Database db) {
+  idb.Transaction txn = db.transaction(storeName, 'readonly');
+  idb.ObjectStore objectStore = txn.objectStore(storeName);
+  int itemCount = 0;
+  int sumKeys = 0;
+  Object? lastKey;
+
+  var cursors = objectStore.openCursor(direction: 'prev').asBroadcastStream();
+  cursors.listen((cursor) {
+    ++itemCount;
+    lastKey = cursor.key;
+    sumKeys += cursor.key as int;
+    expect(cursor.value, 'Item ${cursor.key}');
+    cursor.next();
+  });
+  cursors.last.then((cursor) {
+    expect(lastKey, 0);
+    expect(sumKeys, (100 * 99) ~/ 2);
+    expect(itemCount, 100);
+  });
+  return cursors.last.then((_) => db);
 }
 
 main() {
-  var obj1 = {'a': 100, 'b': 's'};
-  var obj2 = {'x': obj1, 'y': obj1}; // DAG.
-
-  var obj3 = {};
-  obj3['a'] = 100;
-  obj3['b'] = obj3; // Cycle.
-
-  var obj4 = new SplayTreeMap<String, dynamic>(); // Different implementation.
-  obj4['a'] = 100;
-  obj4['b'] = 's';
-
-  var cyclic_list = <Object>[1, 2, 3];
-  cyclic_list[1] = cyclic_list;
-
-  go(name, data) => testReadWrite(123, data, verifyGraph);
-
-  test('test_verifyGraph', () {
-    // Nice to know verifyGraph is working before we rely on it.
-    verifyGraph(obj4, obj4);
-    verifyGraph(obj1, new Map.from(obj1));
-    verifyGraph(obj4, new Map.from(obj4));
-
-    var l1 = [1, 2, 3];
-    var l2 = [
-      const [1, 2, 3],
-      const [1, 2, 3]
-    ];
-    verifyGraph([l1, l1], l2);
-    // Use a try-catch block, since failure can be an expect exception.
-    // package:expect does not allow catching test exceptions.
-    try {
-      verifyGraph([
-        [1, 2, 3],
-        [1, 2, 3]
-      ], l2);
-      fail("Expected failure in verifying the graph.");
-    } catch (_) {
-      // Expected failure. Continue.
-    }
-
-    verifyGraph(cyclic_list, cyclic_list);
-  });
-
-  // Don't bother with these tests if it's unsupported.
-  // Support is tested in indexeddb_1_test
-  if (idb.IdbFactory.supported) {
-    asyncTest(() async {
-      await go('test_simple', obj1);
-      await go('test_DAG', obj2);
-      await go('test_cycle', obj3);
-      await go('test_simple_splay', obj4);
-      await go('const_array_1', const [
-        const [1],
-        const [2]
-      ]);
-      await go('const_array_dag', const [
-        const [1],
-        const [1]
-      ]);
-      await go('array_deferred_copy', [1, 2, 3, obj3, obj3, 6]);
-      await go('array_deferred_copy_2', [
-        1,
-        2,
-        3,
-        [4, 5, obj3],
-        [obj3, 6]
-      ]);
-      await go('cyclic_list', cyclic_list);
-      await go('non-native lists', nonNativeListData);
+    test('Cursors', () async {
+      idb.Database db = await setupDb();
+      await readAllViaCursor(db);
+      await readAllReversedViaCursor(db);
     });
-  }
 }

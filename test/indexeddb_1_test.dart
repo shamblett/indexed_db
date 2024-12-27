@@ -13,6 +13,8 @@ import 'dart:js_interop';
 import 'package:indexed_db/indexed_db.dart' as idb;
 import 'package:test/test.dart';
 
+// Basic database create, open and read write value tests
+
 const storeName = 'TEST';
 const int version = 1;
 
@@ -143,6 +145,7 @@ main() {
     expect(objectStore.name, storeName);
     expect(database.objectStoreNames, [storeName]);
 
+    // Allow the version change transaction to complete, should be needed only in unit testing.
     await Future.delayed(Duration(seconds: 1));
 
     // Write some values using the transaction from the database;

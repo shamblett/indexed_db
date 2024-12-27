@@ -146,6 +146,40 @@ extension type Request._(IDBRequest request) implements EventTarget {
 ///
 extension type CursorWithValue._(IDBCursorWithValue cursor) {
   dynamic get value => cursor.value;
+
+  String? get direction => cursor.direction;
+
+  Object? get key => cursor.key;
+
+  Object? get primaryKey => cursor.primaryKey;
+
+  Object? get source => cursor.source;
+
+  void advance(int count) => cursor.advance(count);
+
+  void continuePrimaryKey(Object key, Object primaryKey) =>
+      cursor.continuePrimaryKey(key.jsify(), primaryKey.jsify());
+
+  Future delete() {
+    try {
+      return _completeRequest(Request._fromCursor(cursor.delete()));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  void next([Object? key]) => cursor.continue_(key.jsify());
+
+  Future update(dynamic value) {
+    try {
+      return _completeRequest(Request._fromCursor(cursor.update(value)));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
+  /// Allows access to the underlying IDB interface.
+  IDBCursorWithValue get idbObject => cursor;
 }
 
 ///
@@ -783,7 +817,7 @@ Future<T> _completeRequest<T>(Request request) {
 //
 // Helper for iterating over cursors in a request.
 //
-Stream<T> _cursorStreamFromResult<T extends Cursor>(
+Stream<T> _cursorStreamFromResult<T extends CursorWithValue>(
     Request request, bool? autoAdvance) {
   final controller = StreamController<T>(sync: true);
 

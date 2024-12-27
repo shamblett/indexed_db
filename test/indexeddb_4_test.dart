@@ -2,123 +2,147 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library IndexedDB4Test;
+library IndexedDB1Test;
 
+import 'package:expect/async_helper.dart';
 import 'package:expect/legacy/async_minitest.dart'; // ignore: deprecated_member_use
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:indexed_db';
+import 'dart:indexed_db' as idb;
 
-// Test for KeyRange and Cursor.
+var dbName = 'test_db_5';
+var storeName = 'test_store';
+var indexName = 'name_index';
+var db;
+var value = {'name_index': 'one', 'value': 'add_value'};
 
-const String DB_NAME = 'Test4';
-const String STORE_NAME = 'TEST';
-const int VERSION = 1;
-
-Future<Database> createAndOpenDb() {
-  return html.window.indexedDB!.deleteDatabase(DB_NAME).then((_) {
-    return html.window.indexedDB!.open(DB_NAME, version: VERSION,
-        onUpgradeNeeded: (e) {
-      var db = e.target.result;
-      db.createObjectStore(STORE_NAME);
-    });
+Future testInit() async {
+  await html.window.indexedDB!.deleteDatabase(dbName);
+  db = await html.window.indexedDB!.open(dbName, version: 1,
+      onUpgradeNeeded: (idb.VersionChangeEvent e) {
+    var db = e.target.result;
+    var objectStore = db.createObjectStore(storeName, autoIncrement: true);
+    objectStore.createIndex(indexName, 'name_index', unique: false);
   });
 }
 
-Future<Database> writeItems(Database db) {
-  Future<Object?> write(index) {
-    var transaction = db.transaction(STORE_NAME, 'readwrite');
-    return transaction
-        .objectStore(STORE_NAME)
-        .put({'content': 'Item $index'}, index) as Future<Object?>;
-  }
-
-  var future = write(0);
-  for (var i = 1; i < 100; ++i) {
-    future = future.then((_) => write(i));
-  }
-
-  // Chain on the DB so we return it at the end.
-  return future.then((_) => db);
+Future testAddDelete() async {
+  var transaction = db.transaction(storeName, 'readwrite');
+  var key = await transaction.objectStore(storeName).add(value);
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  var readValue = await transaction.objectStore(storeName).getObject(key);
+  expect(readValue['value'], value['value']);
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readwrite');
+  await transaction.objectStore(storeName).delete(key);
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readonly');
+  var count = await transaction.objectStore(storeName).count();
+  expect(count, 0);
 }
 
-Future<Database> setupDb() {
-  return createAndOpenDb().then(writeItems);
+Future testClearCount() async {
+  var transaction = db.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).add(value);
+
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  var count = await transaction.objectStore(storeName).count();
+  expect(count, 1);
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readwrite');
+  transaction.objectStore(storeName).clear();
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readonly');
+  count = await transaction.objectStore(storeName).count();
+  expect(count, 0);
 }
 
-testRange(db, range, expectedFirst, expectedLast) {
-  Transaction txn = db.transaction(STORE_NAME, 'readonly');
-  ObjectStore objectStore = txn.objectStore(STORE_NAME);
-  var cursors = objectStore
-      .openCursor(range: range, autoAdvance: true)
-      .asBroadcastStream();
+Future testIndex() async {
+  var transaction = db.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).add(value);
+  transaction.objectStore(storeName).add(value);
+  transaction.objectStore(storeName).add(value);
+  transaction.objectStore(storeName).add(value);
 
-  int lastKey = 0;
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readonly');
+  var index = transaction.objectStore(storeName).index(indexName);
+  var count = await index.count();
+  expect(count, 4);
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  index = transaction.objectStore(storeName).index(indexName);
+  var cursorsLength = await index.openCursor(autoAdvance: true).length;
+  expect(cursorsLength, 4);
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  index = transaction.objectStore(storeName).index(indexName);
+  cursorsLength = await index.openKeyCursor(autoAdvance: true).length;
+  expect(cursorsLength, 4);
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  index = transaction.objectStore(storeName).index(indexName);
+  var readValue = await index.get('one');
+  expect(readValue['value'], value['value']);
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).clear();
+  return transaction.completed;
+}
+
+Future testCursor() async {
+  var deleteValue = {'name_index': 'two', 'value': 'delete_value'};
+  var updateValue = {'name_index': 'three', 'value': 'update_value'};
+  var updatedValue = {'name_index': 'three', 'value': 'updated_value'};
+  var transaction = db.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).add(value);
+  transaction.objectStore(storeName).add(deleteValue);
+  transaction.objectStore(storeName).add(updateValue);
+
+  await transaction.completed;
+  transaction = db.transactionList([storeName], 'readwrite');
+  var index = transaction.objectStore(storeName).index(indexName);
+  var cursors = index.openCursor().asBroadcastStream();
+
   cursors.listen((cursor) {
-    lastKey = cursor.key as int;
     var value = cursor.value;
-    expect(value['content'], 'Item ${cursor.key}');
-  });
-
-  if (expectedFirst != null) {
-    cursors.first.then((cursor) {
-      expect(cursor.key, expectedFirst);
-    });
-  }
-  if (expectedLast != null) {
-    cursors.last.then((cursor) {
-      expect(lastKey, expectedLast);
-    });
-  }
-
-  return cursors.length.then((length) {
-    if (expectedFirst == null) {
-      expect(length, 0);
+    if (value['value'] == 'delete_value') {
+      cursor.delete().then((_) {
+        cursor.next();
+      });
+    } else if (value['value'] == 'update_value') {
+      cursor.update(updatedValue).then((_) {
+        cursor.next();
+      });
     } else {
-      expect(length, expectedLast - expectedFirst + 1);
+      cursor.next();
     }
   });
+  await cursors.last;
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  index = transaction.objectStore(storeName).index(indexName);
+  var readValue = await index.get('three');
+  expect(readValue['value'], 'updated_value');
+  await transaction.completed;
+  transaction = db.transaction(storeName, 'readonly');
+  index = transaction.objectStore(storeName).index(indexName);
+  readValue = await index.get('two');
+  expect(readValue, isNull);
+  return transaction.completed;
 }
 
-main() async {
-  // Don't bother with these tests if it's unsupported.
-  // Support is tested in indexeddb_1_test
-  if (IdbFactory.supported) {
-    var db = await setupDb();
-    test('only1', () => testRange(db, new KeyRange.only(55), 55, 55));
-    test('only2', () => testRange(db, new KeyRange.only(100), null, null));
-    test('only3', () => testRange(db, new KeyRange.only(-1), null, null));
-
-    test('lower1', () => testRange(db, new KeyRange.lowerBound(40), 40, 99));
-    // OPTIONALS lower2() => testRange(db, new KeyRange.lowerBound(40, open: true), 41, 99);
-    test('lower2',
-        () => testRange(db, new KeyRange.lowerBound(40, true), 41, 99));
-    // OPTIONALS lower3() => testRange(db, new KeyRange.lowerBound(40, open: false), 40, 99);
-    test('lower3',
-        () => testRange(db, new KeyRange.lowerBound(40, false), 40, 99));
-
-    test('upper1', () => testRange(db, new KeyRange.upperBound(40), 0, 40));
-    // OPTIONALS upper2() => testRange(db, new KeyRange.upperBound(40, open: true), 0, 39);
-    test('upper2',
-        () => testRange(db, new KeyRange.upperBound(40, true), 0, 39));
-    // upper3() => testRange(db, new KeyRange.upperBound(40, open: false), 0, 40);
-    test('upper3',
-        () => testRange(db, new KeyRange.upperBound(40, false), 0, 40));
-
-    test('bound1', () => testRange(db, new KeyRange.bound(20, 30), 20, 30));
-
-    test('bound2', () => testRange(db, new KeyRange.bound(-100, 200), 0, 99));
-
-    bound3() =>
-        // OPTIONALS testRange(db, new KeyRange.bound(20, 30, upperOpen: true),
-        testRange(db, new KeyRange.bound(20, 30, false, true), 20, 29);
-
-    bound4() =>
-        // OPTIONALS testRange(db, new KeyRange.bound(20, 30, lowerOpen: true),
-        testRange(db, new KeyRange.bound(20, 30, true), 21, 30);
-
-    bound5() =>
-        // OPTIONALS testRange(db, new KeyRange.bound(20, 30, lowerOpen: true, upperOpen: true),
-        testRange(db, new KeyRange.bound(20, 30, true, true), 21, 29);
+main() {
+  if (!idb.IdbFactory.supported) {
+    return;
   }
+  asyncTest(() async {
+    await testInit();
+    await testAddDelete();
+    await testClearCount();
+    await testIndex();
+    await testCursor();
+  });
 }
