@@ -8,6 +8,8 @@
 @TestOn('browser')
 library;
 
+import 'dart:js_interop';
+
 import 'package:indexed_db/indexed_db.dart' as idb;
 import 'package:test/test.dart';
 
@@ -143,7 +145,6 @@ main() {
     expect(database.name, dbName);
     expect(database.version, 1);
     expect(database.objectStoreNames, [storeName]);
-    print('Created new database');
     expect(objectStore.name, storeName);
 
     await Future.delayed(Duration(seconds: 1));
@@ -151,19 +152,16 @@ main() {
     // Write some values using the transaction from the database;
     var transaction = database.transactionList([storeName], 'readwrite');
     transaction.objectStore(storeName).put('Value', 'Key');
-    print('Value1');
     transaction.objectStore(storeName).put(10, 'Int');
-    print('Value2');
     transaction.objectStore(storeName).put([1, 2, 3], 'List');
-    print('Value3');
-    //transaction.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
-    //print('Value4');
+    // Jsify maps for storage
+    transaction
+        .objectStore(storeName)
+        .put({'first': 1, 'second': 2}.jsify(), 'Map');
     transaction.objectStore(storeName).put(true, 'Bool');
-    print('Value5');
     await transaction.completed;
 
     // Check the values
-    print('Checking values');
     transaction = database.transactionList([storeName], 'readonly');
     var value = await transaction.objectStore(storeName).getObject('Key');
     expect(value, 'Value');
@@ -171,8 +169,10 @@ main() {
     expect(value, 10);
     value = await transaction.objectStore(storeName).getObject('List');
     expect(value, [1, 2, 3]);
-    //value = await transaction.objectStore(storeName).getObject('Map');
-    //expect(value, {'first': 1, 'second': 2});
+    // Dartify maps
+    JSObject valueMap =
+        await transaction.objectStore(storeName).getObject('Map');
+    expect(valueMap.dartify(), {'first': 1, 'second': 2});
     value = await transaction.objectStore(storeName).getObject('Bool');
     expect(value, isTrue);
 
