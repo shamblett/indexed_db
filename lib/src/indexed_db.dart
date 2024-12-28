@@ -145,6 +145,8 @@ extension type Request._(IDBRequest request) implements EventTarget {
 /// Cursor With Value
 ///
 extension type CursorWithValue._(IDBCursorWithValue cursor) {
+  CursorWithValue._fromObjectStore(this.cursor);
+
   dynamic get value => cursor.value;
 
   String? get direction => cursor.direction;
@@ -186,6 +188,8 @@ extension type CursorWithValue._(IDBCursorWithValue cursor) {
 /// Cursor
 ///
 extension type Cursor._(IDBCursor cursor) {
+  Cursor._fromObjectStore(this.cursor);
+
   String? get direction => cursor.direction;
 
   Object? get key => cursor.key;
@@ -436,7 +440,7 @@ extension type Index._(IDBIndex index) {
     } else {
       request = Request._fromIndex(index.openCursor(key_OR_range, direction));
     }
-    return _cursorStreamFromResult(request, autoAdvance);
+    return ObjectStore._cursorWithValueStreamFromResult(request, autoAdvance);
   }
 
   /// Creates a stream of cursors over the records in this object store.
@@ -463,7 +467,7 @@ extension type Index._(IDBIndex index) {
       request =
           Request._fromIndex(index.openKeyCursor(key_OR_range, direction));
     }
-    return _cursorStreamFromResult(request, autoAdvance);
+    return ObjectStore._cursorStreamFromResult(request, autoAdvance);
   }
 
   /// Allows access to the underlying IDB interface.
@@ -675,6 +679,14 @@ extension type ObjectStore._(IDBObjectStore store) {
     }
   }
 
+  Future clear() {
+    try {
+      return _completeRequest(Request._fromObjectStore(store.clear()));
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
   Future<int> count([dynamic key_OR_range]) {
     try {
       var request = store.count(key_OR_range);
@@ -775,7 +787,7 @@ extension type ObjectStore._(IDBObjectStore store) {
       request =
           Request._fromObjectStore(store.openCursor(key_OR_range, direction));
     }
-    return _cursorStreamFromResult(request, autoAdvance);
+    return _cursorWithValueStreamFromResult(request, autoAdvance);
   }
 
   Request openKeyCursor(Object? range, [String? direction]) =>
@@ -798,6 +810,52 @@ extension type ObjectStore._(IDBObjectStore store) {
 
   /// Allows access to the underlying IDB interface.
   IDBObjectStore get idbObject => store;
+
+  //
+  //Helper for iterating over cursors in a request.
+  //
+  static Stream<Cursor> _cursorStreamFromResult(
+      Request request, bool? autoAdvance) {
+    var controller = StreamController<Cursor>(sync: true);
+
+    request.onError.listen(controller.addError);
+
+    request.onSuccess.listen((e) {
+      Cursor cursor = Cursor._fromObjectStore(request.result);
+      if (cursor == null) {
+        controller.close();
+      } else {
+        controller.add(cursor);
+        if (autoAdvance == true && controller.hasListener) {
+          cursor.next();
+        }
+      }
+    });
+    return controller.stream;
+  }
+
+  //
+  //Helper for iterating over cursors with values in a request.
+  //
+  static Stream<CursorWithValue> _cursorWithValueStreamFromResult(
+      Request request, bool? autoAdvance) {
+    var controller = StreamController<CursorWithValue>(sync: true);
+
+    request.onError.listen(controller.addError);
+
+    request.onSuccess.listen((e) {
+      CursorWithValue cursor = CursorWithValue._fromObjectStore(request.result);
+      if (cursor == null) {
+        controller.close();
+      } else {
+        controller.add(cursor);
+        if (autoAdvance == true && controller.hasListener) {
+          cursor.next();
+        }
+      }
+    });
+    return controller.stream;
+  }
 }
 
 //
@@ -812,29 +870,6 @@ Future<T> _completeRequest<T>(Request request) {
   });
   request.onError.listen(completer.completeError);
   return completer.future;
-}
-
-//
-// Helper for iterating over cursors in a request.
-//
-Stream<T> _cursorStreamFromResult<T extends CursorWithValue>(
-    Request request, bool? autoAdvance) {
-  final controller = StreamController<T>(sync: true);
-
-  request.onError.listen(controller.addError);
-
-  request.onSuccess.listen((e) {
-    T? cursor = request.result;
-    if (cursor == null) {
-      controller.close();
-    } else {
-      controller.add(cursor);
-      if (autoAdvance == true && controller.hasListener) {
-        //TODO fix this - (cursor as dynamic).next();
-      }
-    }
-  });
-  return controller.stream;
 }
 
 //
