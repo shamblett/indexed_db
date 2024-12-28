@@ -9,87 +9,78 @@
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license.
 
-// ignore: deprecated_member_use
 import 'dart:async';
+import 'dart:js_interop';
 
 import 'package:indexed_db/indexed_db.dart' as idb;
 
-const storeName = 'TEST';
+const storeName = 'IDBTestStore';
 const int version = 1;
 
-int databaseNameIndex = 0;
-String nextDatabaseName() {
-  return 'Test1_${databaseNameIndex++}';
-}
+void printValues(String message, dynamic key, dynamic value) =>
+    print('EXAMPLE - $message - Key $key, Value $value');
 
 void main() async {
-  var dbName = nextDatabaseName();
+  var dbName = 'IDBTestDatabase';
   final factory = idb.IdbFactory();
-  late idb.Database db;
-
-  Future<T> _runInTxn<T>(Future<T>? Function(idb.ObjectStore) requestCommand,
-      [String txnMode = 'readwrite']) async {
-    final trans = db.transaction(storeName, txnMode);
-    final store = trans.objectStore(storeName);
-    final result = await requestCommand(store)!;
-    await trans.completed;
-    return result;
-  }
-
-  Future<String> save(String obj, String key) =>
-      _runInTxn<String>((dynamic store) async => await store.put(obj, key));
-
-  Future<dynamic> getByKey(String key) => _runInTxn<dynamic>(
-      (dynamic store) async => await store.getObject(key), 'readonly');
 
   // Delete any existing DBs.
   factory.deleteDatabase(dbName);
-  print('Deleted database');
+  print('EXAMPLE - Deleted database');
 
   // Open the database at version 1
   var database = await factory.open(dbName);
-  db = database;
 
-  print('Created new database');
+  print('EXAMPLE - Created new database');
 
   // Create the object store
-  final objectStore = database.createObjectStore(storeName);
-  print('Object store created');
+  database.createObjectStore(storeName);
+  print('EXAMPLE - Object store created');
 
   // Await the completion of the version change transaction
   await Future.delayed(Duration(seconds: 1));
-  print('Awaited VC transaction');
+  print('EXAMPLE - Awaited VC transaction');
 
-  // Write some values using the transaction from the database
-  print('Saving');
-  await save('Value', 'Key');
-  print('Getting');
-  var value = await getByKey('Key');
-  print('Value is $value');
-  // transaction.objectStore(storeName).put(10, 'Int');
-  // print('Value2');
-  // transaction.objectStore(storeName).put([1, 2, 3], 'List');
-  // print('Value3');
-  // // transaction.objectStore(storeName).put({'first': 1, 'second': 2}, 'Map');
-  // // print('Value4');
-  // transaction.objectStore(storeName).put(true, 'Bool');
-  // print('Value5');
+  // Write some values using the transaction from the database;
+  var transaction = database.transactionList([storeName], 'readwrite');
+  print('');
+  print('EXAMPLE - Writing values');
+  print('');
+  printValues('Writing', 'String', 'Value');
+  transaction.objectStore(storeName).put('Value', 'Key');
+  printValues('Writing', 'Int', 10);
+  transaction.objectStore(storeName).put(10, 'Int');
+  printValues('Writing', 'List', [1, 2, 3]);
+  transaction.objectStore(storeName).put([1, 2, 3], 'List');
+  printValues('Writing', 'Map', {'first': 1, 'second': 2});
+  // Jsify maps for storage
+  transaction
+      .objectStore(storeName)
+      .put({'first': 1, 'second': 2}.jsify(), 'Map');
+  printValues('Writing', 'Bool', true);
+  transaction.objectStore(storeName).put(true, 'Bool');
+
+  // Wait for the transaction to complete
+  await transaction.completed;
 
   // Check the values
-  // print('Checking values');
-  // transaction = database.transactionList([storeName], 'readonly');
-  // //var value = await transaction.objectStore(storeName).getObject('Key');
-  // var value = await objectStore.getObject('Key');
-  // expect(value, 'Value');
-  // value = await transaction.objectStore(storeName).getObject('Int');
-  // expect(value, 10);
-  // value = await transaction.objectStore(storeName).getObject('List');
-  // expect(value, [1, 2, 3]);
-  // value = await transaction.objectStore(storeName).getObject('Map');
-  // expect(value, {'first': 1, 'second': 2});
-  // value = await transaction.objectStore(storeName).getObject('Bool');
-  // expect(value, isTrue);
+  transaction = database.transactionList([storeName], 'readonly');
+  print('');
+  print('EXAMPLE - Reading values');
+  print('');
+  var value = await transaction.objectStore(storeName).getObject('Key');
+  printValues('Reading', 'Key', value);
+  value = await transaction.objectStore(storeName).getObject('Int');
+  printValues('Reading', 'Int', value);
+  value = await transaction.objectStore(storeName).getObject('List');
+  printValues('Reading', 'List', value);
+  // Dartify maps when retrieved
+  JSObject valueMap = await transaction.objectStore(storeName).getObject('Map');
+  printValues('Reading', 'Map', valueMap);
+  value = await transaction.objectStore(storeName).getObject('Bool');
+  printValues('Reading', 'Bool', value);
 
   // Close the database
+  print('EXAMPLE -  Closing Database');
   database.close();
 }
