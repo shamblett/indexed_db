@@ -39,8 +39,8 @@ Future testAddDelete() async {
   await transaction.completed;
   transaction = db.transaction(storeName, 'readonly');
   JSObject readValue = await transaction.objectStore(storeName).getObject(key);
-  var dartObject = readValue.dartify();
-  expect((dartObject as Map)['value'], value['value']);
+  var dartObject = readValue.dartify() as Map;
+  expect((dartObject)['value'], value['value']);
   await transaction.completed;
   transaction = db.transactionList([storeName], 'readwrite');
   await transaction.objectStore(storeName).delete(key);
@@ -68,7 +68,6 @@ Future testClearCount() async {
 }
 
 Future testIndex() async {
-  print('1');
   var transaction = db.transaction(storeName, 'readwrite');
   transaction.objectStore(storeName).add(value.jsify());
   transaction.objectStore(storeName).add(value.jsify());
@@ -76,31 +75,27 @@ Future testIndex() async {
   transaction.objectStore(storeName).add(value.jsify());
 
   await transaction.completed;
-  print('2');
   transaction = db.transactionList([storeName], 'readonly');
   var index = transaction.objectStore(storeName).index(indexName);
   var count = await index.count();
   expect(count, 4);
   await transaction.completed;
-  print('3');
   transaction = db.transaction(storeName, 'readonly');
   index = transaction.objectStore(storeName).index(indexName);
   var cursorsLength = await index.openCursor(autoAdvance: true).length;
   expect(cursorsLength, 4);
   await transaction.completed;
-  print('4');
   transaction = db.transaction(storeName, 'readonly');
   index = transaction.objectStore(storeName).index(indexName);
   cursorsLength = await index.openKeyCursor(autoAdvance: true).length;
   expect(cursorsLength, 4);
   await transaction.completed;
-  print('5');
   transaction = db.transaction(storeName, 'readonly');
   index = transaction.objectStore(storeName).index(indexName);
-  var readValue = await index.get('one');
-  expect(readValue['value'], value['value']);
+  JSObject readValue = await index.get('one');
+  var dartObject = readValue.dartify() as Map;
+  expect((dartObject)['value'], value['value']);
   await transaction.completed;
-  print('6');
   transaction = db.transaction(storeName, 'readwrite');
   transaction.objectStore(storeName).clear();
   return transaction.completed;
@@ -121,13 +116,14 @@ Future testCursor() async {
   var cursors = index.openCursor().asBroadcastStream();
 
   cursors.listen((cursor) {
-    var value = cursor.value;
-    if (value['value'] == 'delete_value') {
+    JSObject value = cursor.value;
+    var dartObject = value.dartify() as Map;
+    if ((dartObject)['value'] == 'delete_value') {
       cursor.delete().then((_) {
         cursor.next();
       });
-    } else if (value['value'] == 'update_value') {
-      cursor.update(updatedValue).then((_) {
+    } else if (dartObject['value'] == 'update_value') {
+      cursor.update(updatedValue.jsify()).then((_) {
         cursor.next();
       });
     } else {
@@ -139,14 +135,13 @@ Future testCursor() async {
   transaction = db.transaction(storeName, 'readonly');
   index = transaction.objectStore(storeName).index(indexName);
   JSObject readValue = await index.get('three');
-  var dartObject = readValue.dartify();
-  expect((dartObject as Map)['value'], 'updated_value');
+  var dartObject = readValue.dartify() as Map;
+  expect((dartObject)['value'], 'updated_value');
   await transaction.completed;
   transaction = db.transaction(storeName, 'readonly');
   index = transaction.objectStore(storeName).index(indexName);
-  readValue = await index.get('two');
-  dartObject = readValue.dartify();
-  expect(dartObject, isNull);
+  var readValue1 = await index.get('two');
+  expect(readValue1, isNull);
   return transaction.completed;
 }
 
@@ -156,6 +151,6 @@ main() {
     await testAddDelete();
     await testClearCount();
     await testIndex();
-    //await testCursor();
+    await testCursor();
   });
 }

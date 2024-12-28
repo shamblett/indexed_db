@@ -108,5 +108,6 @@ main() {
       idb.Database db = await setupDb();
       await readAllViaCursor(db);
       await readAllReversedViaCursor(db);
+      db.close();
     });
 }

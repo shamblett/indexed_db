@@ -120,4 +120,5 @@ main() async {
   // bound5() =>
   //     // OPTIONALS testRange(db,  idb.KeyRange.bound(20, 30, lowerOpen: true, upperOpen: true),
   //     testRange(db,  idb.KeyRange.bound(20, 30, true, true), 21, 29);
+  db.close();
 }
