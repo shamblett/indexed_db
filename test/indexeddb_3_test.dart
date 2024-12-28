@@ -55,33 +55,31 @@ Future<idb.Database> setupDb() {
   return createAndOpenDb().then(writeItems);
 }
 
-testRange(idb.Database db, idb.KeyRange range, int expectedFirst, int expectedLast) {
+testRange(idb.Database db, idb.KeyRange range, int expectedFirst,
+    int expectedLast) async {
   idb.Transaction txn = db.transaction(storeName, 'readonly');
   idb.ObjectStore objectStore = txn.objectStore(storeName);
   var cursors = objectStore
       .openCursor(range: range, autoAdvance: true)
       .asBroadcastStream();
-
   int lastKey = 0;
   cursors.listen((idb.CursorWithValue cursor) {
     lastKey = cursor.key as int;
     JSObject value = cursor.value;
-    var dartObject = value.dartify();
-    expect((dartObject as Map)['content'], 'Item ${cursor.key}');
+    var dartObject = value.dartify() as Map;
+    expect((dartObject)['content'], 'Item ${cursor.key}');
   });
 
   cursors.first.then((cursor) {
     expect(cursor.key, expectedFirst);
-    cursor.next();
   });
   cursors.last.then((cursor) {
     expect(lastKey, expectedLast);
-    cursor.next();
   });
 
   return cursors.length.then((length) {
     expect(length, expectedLast - expectedFirst + 1);
-    });
+  });
 }
 
 main() async {
@@ -89,36 +87,20 @@ main() async {
   test('only1', () => testRange(db, idb.KeyRange.only(55), 55, 55));
   // test('only2', () => testRange(db, idb.KeyRange.only(100), null, null));
   // test('only3', () => testRange(db, idb.KeyRange.only(-1), null, null));
-  //
-  // test('lower1', () => testRange(db, idb.KeyRange.lowerBound(40), 40, 99));
-  // // OPTIONALS lower2() => testRange(db,  idb.KeyRange.lowerBound(40, open: true), 41, 99);
-  // test(
-  //     'lower2', () => testRange(db, idb.KeyRange.lowerBound(40, true), 41, 99));
-  // // OPTIONALS lower3() => testRange(db,  idb.KeyRange.lowerBound(40, open: false), 40, 99);
-  // test('lower3',
-  //     () => testRange(db, idb.KeyRange.lowerBound(40, false), 40, 99));
-  //
-  // test('upper1', () => testRange(db, idb.KeyRange.upperBound(40), 0, 40));
-  // // OPTIONALS upper2() => testRange(db,  idb.KeyRange.upperBound(40, open: true), 0, 39);
-  // test('upper2', () => testRange(db, idb.KeyRange.upperBound(40, true), 0, 39));
-  // // upper3() => testRange(db,  idb.KeyRange.upperBound(40, open: false), 0, 40);
-  // test(
-  //     'upper3', () => testRange(db, idb.KeyRange.upperBound(40, false), 0, 40));
-  //
-  // test('bound1', () => testRange(db, idb.KeyRange.bound(20, 30), 20, 30));
-  //
-  // test('bound2', () => testRange(db, idb.KeyRange.bound(-100, 200), 0, 99));
-
-  // bound3() =>
-  //     // OPTIONALS testRange(db,  idb.KeyRange.bound(20, 30, upperOpen: true),
-  //     testRange(db,  idb.KeyRange.bound(20, 30, false, true), 20, 29);
-  //
-  // bound4() =>
-  //     // OPTIONALS testRange(db,  idb.KeyRange.bound(20, 30, lowerOpen: true),
-  //     testRange(db,  idb.KeyRange.bound(20, 30, true), 21, 30);
-  //
-  // bound5() =>
-  //     // OPTIONALS testRange(db,  idb.KeyRange.bound(20, 30, lowerOpen: true, upperOpen: true),
-  //     testRange(db,  idb.KeyRange.bound(20, 30, true, true), 21, 29);
-  db.close();
+  test('lower1', () => testRange(db, idb.KeyRange.lowerBound(40), 40, 99));
+  test(
+      'lower2', () => testRange(db, idb.KeyRange.lowerBound(40, true), 41, 99));
+  test('lower3',
+      () => testRange(db, idb.KeyRange.lowerBound(40, false), 40, 99));
+  test('upper1', () => testRange(db, idb.KeyRange.upperBound(40), 0, 40));
+  test('upper2', () => testRange(db, idb.KeyRange.upperBound(40, true), 0, 39));
+  test(
+      'upper3', () => testRange(db, idb.KeyRange.upperBound(40, false), 0, 40));
+  test('bound1', () => testRange(db, idb.KeyRange.bound(20, 30), 20, 30));
+  test('bound2', () => testRange(db, idb.KeyRange.bound(-100, 200), 0, 99));
+  test('bound3',
+      () => testRange(db, idb.KeyRange.bound(20, 30, false, true), 20, 29));
+  test('bound4', () => testRange(db, idb.KeyRange.bound(20, 30, true), 21, 30));
+  test('bound5',
+      () => testRange(db, idb.KeyRange.bound(20, 30, true, true), 21, 29));
 }

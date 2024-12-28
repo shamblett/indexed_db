@@ -821,18 +821,20 @@ extension type ObjectStore._(IDBObjectStore store) {
     request.onError.listen(controller.addError);
 
     request.onSuccess.listen((e) {
-      if (request.result != null) {
-        Cursor cursor = Cursor._fromObjectStore(request.result);
-        if (cursor == null) {
-          controller.close();
-        } else {
-          controller.add(cursor);
-          if (autoAdvance == true && controller.hasListener) {
-            cursor.next();
+      if ( !controller.isClosed ) {
+        if (request.result != null) {
+          Cursor cursor = Cursor._fromObjectStore(request.result);
+          if (cursor == null) {
+            controller.close();
+          } else {
+            controller.add(cursor);
+            if (autoAdvance == true && controller.hasListener) {
+              cursor.next();
+            }
           }
+        } else {
+          controller.close();
         }
-      } else {
-        controller.close();
       }
     });
     return controller.stream;
@@ -848,19 +850,21 @@ extension type ObjectStore._(IDBObjectStore store) {
     request.onError.listen(controller.addError);
 
     request.onSuccess.listen((e) {
-      if (request.result != null) {
-        CursorWithValue cursor =
-            CursorWithValue._fromObjectStore(request.result);
-        if (cursor == null) {
-          controller.close();
-        } else {
-          controller.add(cursor);
-          if (autoAdvance == true && controller.hasListener) {
-            cursor.next();
+      if ( !controller.isClosed ) {
+        if (request.result != null) {
+          CursorWithValue cursor =
+          CursorWithValue._fromObjectStore(request.result);
+          if (cursor == null) {
+            controller.close();
+          } else {
+            controller.add(cursor);
+            if (autoAdvance == true && controller.hasListener) {
+              cursor.next();
+            }
           }
+        } else {
+          controller.close();
         }
-      } else {
-        controller.close();
       }
     });
     return controller.stream;
