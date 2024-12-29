@@ -9,7 +9,6 @@
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license.
 
-import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:indexed_db/indexed_db.dart' as idb;
@@ -28,18 +27,10 @@ void main() async {
   factory.deleteDatabase(dbName);
   print('EXAMPLE - Deleted database');
 
-  // Open the database at version 1
-  var database = await factory.open(dbName);
-
-  print('EXAMPLE - Created new database');
-
-  // Create the object store
-  database.createObjectStore(storeName);
-  print('EXAMPLE - Object store created');
-
-  // Await the completion of the version change transaction
-  await Future.delayed(Duration(seconds: 1));
-  print('EXAMPLE - Awaited VC transaction');
+  // Open the database.
+  var database = await factory.openCreate(dbName, storeName);
+  print(
+      'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName');
 
   // Write some values using the transaction from the database;
   var transaction = database.transactionList([storeName], 'readwrite');
