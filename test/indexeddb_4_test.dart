@@ -18,18 +18,20 @@ late idb.Database db;
 var value = {'name_index': 'one', 'value': 'add_value'};
 
 Future testInit() async {
+  void upgradeNeeded(idb.VersionChangeEvent event) async {
+    // Save the database and create the object store
+    db = event.target.database;
+    final objectStore = db.createObjectStore(storeName, autoIncrement: true);
+    // Create the index
+    objectStore.createIndex(indexName, 'name_index', unique: false);
+  }
+
   final factory = idb.IdbFactory();
   // Delete any existing DBs.
   factory.deleteDatabase(dbName);
 
   // Open the database at version 1
-  db = await factory.open(dbName);
-  var objectStore = db.createObjectStore(storeName, autoIncrement: true);
-  objectStore.createIndex(indexName, 'name_index', unique: false);
-
-  // Allow the version change transaction to complete, should be needed only in unit testing.
-  await Future.delayed(Duration(seconds: 1));
-
+  await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
   return db;
 }
 

@@ -171,7 +171,8 @@ main() {
     factory.deleteDatabase(dbName);
 
     // Open and check the database at version 1
-    final database = await factory.openCreate(dbName, storeName);
+    final result = await factory.openCreate(dbName, storeName);
+    final database = result.database;
     expect(database.name, dbName);
     expect(database.version, 1);
 

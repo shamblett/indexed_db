@@ -23,15 +23,9 @@ Future<idb.Database> createAndOpenDb() async {
   factory.deleteDatabase(dbName);
 
   // Open the database at version 1
-  final database = await factory.open(dbName);
+  final result = await factory.openCreate(dbName, storeName);
 
-  // Create the object store
-  database.createObjectStore(storeName);
-
-  // Allow the version change transaction to complete, should be needed only in unit testing.
-  await Future.delayed(Duration(seconds: 1));
-
-  return database;
+  return result.database;
 }
 
 Future<idb.Database> writeItems(idb.Database db) {

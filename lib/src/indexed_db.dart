@@ -72,6 +72,14 @@ import 'package:web/web.dart';
 ///
 typedef DomException = DOMException;
 
+///
+/// Helper class for [openCreate] return value
+class OpenCreateResult {
+  OpenCreateResult(this.database, this.objectStore);
+  Database database;
+  ObjectStore objectStore;
+}
+
 /// Version Change Event
 ///
 extension type VersionChangeEvent._(IDBVersionChangeEvent event)
@@ -268,24 +276,33 @@ extension type IdbFactory._(IDBFactory factory) {
   }
 
   ///
-  /// Opens and creates a database and object store.
+  /// Opens a database and creates an object store.
+  ///
+  /// Allows the setting of object store creation parameters if
+  /// needed, See [Database.createObjectStore]
   /// Obviates the need for an on upgrade needed callback.
+  ///
+  /// The [OpenCreateResult] contains both the database and the object store
+  ///
   /// Note: not part of the original dart:indexed_db implementation.
-  Future<Database> openCreate(String dbName, String objectStoreName) async {
+  Future<OpenCreateResult> openCreate(String dbName, String objectStoreName,
+      {keyPath, bool? autoIncrement}) async {
     late Database database;
+    late ObjectStore objectStore;
 
     void upgradeNeeded(VersionChangeEvent event) async {
       database = event.target.database;
-      database.createObjectStore(objectStoreName);
+      objectStore = database.createObjectStore(objectStoreName,
+          keyPath: keyPath, autoIncrement: autoIncrement);
     }
 
     try {
       OpenDBRequest request;
-      final completer = Completer<Database>();
+      final completer = Completer<OpenCreateResult>();
       request = OpenDBRequest._fromFactory(factory.open(dbName));
       request.onUpgradeNeeded.listen(upgradeNeeded);
-      _completeRequest(Request._fromFactory(request.idbObject))
-          .then((_) => completer.complete(database));
+      _completeRequest(Request._fromFactory(request.idbObject)).then(
+          (_) => completer.complete(OpenCreateResult(database, objectStore)));
       return completer.future;
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);

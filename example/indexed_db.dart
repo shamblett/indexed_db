@@ -28,7 +28,8 @@ void main() async {
   print('EXAMPLE - Deleted database');
 
   // Open the database.
-  var database = await factory.openCreate(dbName, storeName);
+  final result = await factory.openCreate(dbName, storeName);
+  final database = result.database;
   print(
       'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName');
 
