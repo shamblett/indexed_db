@@ -267,6 +267,31 @@ extension type IdbFactory._(IDBFactory factory) {
     }
   }
 
+  ///
+  /// Opens and creates a database and object store.
+  /// Obviates the need for an on upgrade needed callback.
+  /// Note: not part of the original dart:indexed_db implementation.
+  Future<Database> openCreate(String dbName, String objectStoreName) async {
+    late Database database;
+
+    void upgradeNeeded(VersionChangeEvent event) async {
+      database = event.target.database;
+      database.createObjectStore(objectStoreName);
+    }
+
+    try {
+      OpenDBRequest request;
+      final completer = Completer<Database>();
+      request = OpenDBRequest._fromFactory(factory.open(dbName));
+      request.onUpgradeNeeded.listen(upgradeNeeded);
+      _completeRequest(Request._fromFactory(request.idbObject))
+          .then((_) => completer.complete(database));
+      return completer.future;
+    } catch (e, stacktrace) {
+      return Future.error(e, stacktrace);
+    }
+  }
+
   /// Checks to see if Indexed DB is supported on the current platform.
   static bool get supported => true; // Always supported now.
 

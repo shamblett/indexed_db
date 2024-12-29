@@ -108,7 +108,7 @@ main() {
     expect(changeEvent2.newVersion, 2);
   });
 
-  test('Read Write', () async {
+  test('Read Write - with upgrade needed callback', () async {
     late idb.ObjectStore objectStore;
     late idb.Database database;
     late idb.IdbFactory factory;
@@ -131,6 +131,51 @@ main() {
 
     // Check the object store
     expect(objectStore.name, storeName);
+    expect(database.objectStoreNames, [storeName]);
+
+    // Write some values using the transaction from the database;
+    var transaction = database.transactionList([storeName], 'readwrite');
+    transaction.objectStore(storeName).put('Value', 'Key');
+    transaction.objectStore(storeName).put(10, 'Int');
+    transaction.objectStore(storeName).put([1, 2, 3], 'List');
+    // Jsify maps for storage
+    transaction
+        .objectStore(storeName)
+        .put({'first': 1, 'second': 2}.jsify(), 'Map');
+    transaction.objectStore(storeName).put(true, 'Bool');
+    await transaction.completed;
+
+    // Check the values
+    transaction = database.transactionList([storeName], 'readonly');
+    var value = await transaction.objectStore(storeName).getObject('Key');
+    expect(value, 'Value');
+    value = await transaction.objectStore(storeName).getObject('Int');
+    expect(value, 10);
+    value = await transaction.objectStore(storeName).getObject('List');
+    expect(value, [1, 2, 3]);
+    // Dartify maps
+    JSObject valueMap =
+        await transaction.objectStore(storeName).getObject('Map');
+    expect(valueMap.dartify(), {'first': 1, 'second': 2});
+    value = await transaction.objectStore(storeName).getObject('Bool');
+    expect(value, isTrue);
+
+    // Close the database
+    database.close();
+  });
+
+  test('Read Write - with open create', () async {
+    final factory = idb.IdbFactory();
+
+    // Delete any existing DBs.
+    factory.deleteDatabase(dbName);
+
+    // Open and check the database at version 1
+    final database = await factory.openCreate(dbName, storeName);
+    expect(database.name, dbName);
+    expect(database.version, 1);
+
+    // Check the object store
     expect(database.objectStoreNames, [storeName]);
 
     // Write some values using the transaction from the database;
