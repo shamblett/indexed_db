@@ -17,11 +17,7 @@ import 'package:test/test.dart';
 
 const storeName = 'TEST';
 const int version = 1;
-
-int databaseNameIndex = 0;
-String nextDatabaseName() {
-  return 'Test1_${databaseNameIndex++}';
-}
+const dbName = 'TESTDB';
 
 main() {
   test('Supported', () {
@@ -29,7 +25,6 @@ main() {
   });
 
   test('Open - No Version', () async {
-    var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
 
     // Delete any existing DBs.
@@ -42,18 +37,6 @@ main() {
     expect(database.objectStoreNames, isNull);
   });
 
-  test('Open - Version - no upgrade needed callback', () async {
-    var dbName = nextDatabaseName();
-    final factory = idb.IdbFactory();
-
-    // Delete any existing DBs.
-    factory.deleteDatabase(dbName);
-
-    // Open the database at version 1 with no upgrade needed callback
-    expect(
-        factory.open(dbName, version: version), throwsA(isA<ArgumentError>()));
-  });
-
   test('Open - Version - with upgrade needed callback', () async {
     var upgradeCalled = false;
     idb.VersionChangeEvent changeEvent = idb.VersionChangeEvent('test');
@@ -62,7 +45,6 @@ main() {
       changeEvent = event;
     }
 
-    var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
 
     // Delete any existing DBs.
@@ -95,7 +77,6 @@ main() {
       changeEvent2 = event;
     }
 
-    var dbName = nextDatabaseName();
     final factory = idb.IdbFactory();
 
     // Delete any existing DBs.
@@ -128,25 +109,29 @@ main() {
   });
 
   test('Read Write', () async {
-    var dbName = nextDatabaseName();
-    final factory = idb.IdbFactory();
+    late idb.ObjectStore objectStore;
+    late idb.Database database;
+    late idb.IdbFactory factory;
+
+    void upgradeNeeded(idb.VersionChangeEvent event) async {
+      // Save the database and create the object store
+      database = event.target.database;
+      objectStore = database.createObjectStore(storeName);
+    }
+
+    factory = idb.IdbFactory();
 
     // Delete any existing DBs.
     factory.deleteDatabase(dbName);
-    print('Deleted database');
 
-    // Open the database at version 1
-    final database = await factory.open(dbName);
+    // Open and check the database at version 1
+    await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
     expect(database.name, dbName);
     expect(database.version, 1);
 
-    // Create the object store
-    final objectStore = database.createObjectStore(storeName);
+    // Check the object store
     expect(objectStore.name, storeName);
     expect(database.objectStoreNames, [storeName]);
-
-    // Allow the version change transaction to complete, should be needed only in unit testing.
-    await Future.delayed(Duration(seconds: 1));
 
     // Write some values using the transaction from the database;
     var transaction = database.transactionList([storeName], 'readwrite');

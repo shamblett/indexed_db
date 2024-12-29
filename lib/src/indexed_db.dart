@@ -74,7 +74,8 @@ typedef DomException = DOMException;
 
 /// Version Change Event
 ///
-extension type VersionChangeEvent._(IDBVersionChangeEvent event) {
+extension type VersionChangeEvent._(IDBVersionChangeEvent event)
+    implements Event {
   VersionChangeEvent.fromOpen(this.event);
 
   factory VersionChangeEvent(String type, [Map? eventInitDict]) {
@@ -111,6 +112,8 @@ extension type Request._(IDBRequest request) implements EventTarget {
   Request._fromCursor(this.request);
 
   Request._fromIndex(this.request);
+
+  Request._fromFactory(this.request);
 
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
@@ -240,47 +243,25 @@ extension type IdbFactory._(IDBFactory factory) {
       {int? version,
       void Function(VersionChangeEvent event)? onUpgradeNeeded,
       void Function(Event event)? onBlocked}) {
-    final completer = Completer<Database>();
     if ((version == null) != (onUpgradeNeeded == null)) {
       return Future.error(ArgumentError(
           'Version and onUpgradeNeeded must be specified together'));
     }
     try {
-      IDBOpenDBRequest request;
-
+      OpenDBRequest request;
       if (version != null) {
-        request = factory.open(name, version);
+        request = OpenDBRequest._fromFactory(factory.open(name, version));
       } else {
-        request = factory.open(name);
+        request = OpenDBRequest._fromFactory(factory.open(name));
       }
 
-      request.onsuccess = ((Event _) {
-        if (!completer.isCompleted) {
-          completer.complete(Database._fromOpenRequest(request.result));
-        }
-      }).toJS;
-
-      request.onblocked = ((Event e) {
-        if (onBlocked != null) {
-          onBlocked(e);
-        }
-      }).toJS;
-
-      request.onupgradeneeded = ((IDBVersionChangeEvent e) {
-        if (onUpgradeNeeded != null) {
-          onUpgradeNeeded(VersionChangeEvent.fromOpen(e));
-        }
-        completer.complete(Database._fromOpenRequest(request.result));
-      }).toJS;
-
-      request.onerror = ((Event e) {
-        if (!completer.isCompleted) {
-          completer.completeError(
-              (e.currentTarget as IDBOpenDBRequest).error?.message as Object);
-        }
-      }).toJS;
-
-      return completer.future;
+      if (onUpgradeNeeded != null) {
+        request.onUpgradeNeeded.listen(onUpgradeNeeded);
+      }
+      if (onBlocked != null) {
+        request.onBlocked.listen(onBlocked);
+      }
+      return _completeRequest(Request._fromFactory(request.idbObject));
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
     }
@@ -544,8 +525,8 @@ extension type Database._(IDBDatabase database) implements EventTarget {
       EventStreamProvider<ProgressEvent>('error');
   static const EventStreamProvider<Event> closeEvent =
       EventStreamProvider<ProgressEvent>('close');
-  static const EventStreamProvider<Event> versionChangeEvent =
-      EventStreamProvider<ProgressEvent>('versionchange');
+  static const EventStreamProvider<VersionChangeEvent> versionChangeEvent =
+      EventStreamProvider<VersionChangeEvent>('versionchange');
 
   String? get name => database.name;
 
@@ -559,7 +540,8 @@ extension type Database._(IDBDatabase database) implements EventTarget {
   Stream<Event> get onError => errorEvent.forTarget(this);
 
   /// Stream of version change events handled by this [Database].
-  Stream<Event> get onVersionChange => versionChangeEvent.forTarget(this);
+  Stream<VersionChangeEvent> get onVersionChange =>
+      versionChangeEvent.forTarget(this);
 
   int? get version => database.version;
 
@@ -615,19 +597,22 @@ extension type OpenDBRequest._(IDBOpenDBRequest openrequest)
     implements EventTarget {
   OpenDBRequest._fromVersionChangeRequest(this.openrequest);
 
+  OpenDBRequest._fromFactory(this.openrequest);
+
   /// Static factory designed to expose events to event handlers
   /// that are not necessarily instances of Database.
   /// See EventStreamProvider for usage information.
   static const EventStreamProvider<Event> blockedEvent =
       EventStreamProvider<ProgressEvent>('blocked');
-  static const EventStreamProvider<Event> upgradeNeededEvent =
-      EventStreamProvider<ProgressEvent>('upgradeneeded');
+  static const EventStreamProvider<VersionChangeEvent> upgradeNeededEvent =
+      EventStreamProvider<VersionChangeEvent>('upgradeneeded');
 
   /// Stream of blocked events handled by this [OpenDBRequest].
   Stream<Event> get onBlocked => blockedEvent.forTarget(this);
 
   /// Stream of upgrade needed events handled by this [OpenDBRequest].
-  Stream<Event> get onUpgradeNeeded => upgradeNeededEvent.forTarget(this);
+  Stream<VersionChangeEvent> get onUpgradeNeeded =>
+      upgradeNeededEvent.forTarget(this);
 
   DOMException? get error => openrequest.error;
 
@@ -821,7 +806,7 @@ extension type ObjectStore._(IDBObjectStore store) {
     request.onError.listen(controller.addError);
 
     request.onSuccess.listen((e) {
-      if ( !controller.isClosed ) {
+      if (!controller.isClosed) {
         if (request.result != null) {
           Cursor cursor = Cursor._fromObjectStore(request.result);
           if (cursor == null) {
@@ -850,10 +835,10 @@ extension type ObjectStore._(IDBObjectStore store) {
     request.onError.listen(controller.addError);
 
     request.onSuccess.listen((e) {
-      if ( !controller.isClosed ) {
+      if (!controller.isClosed) {
         if (request.result != null) {
           CursorWithValue cursor =
-          CursorWithValue._fromObjectStore(request.result);
+              CursorWithValue._fromObjectStore(request.result);
           if (cursor == null) {
             controller.close();
           } else {
