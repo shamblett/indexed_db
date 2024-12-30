@@ -22,6 +22,22 @@ void printValues(String message, dynamic key, dynamic value) =>
 void main() async {
   var dbName = 'IDBTestDatabase';
   final factory = idb.IdbFactory();
+  late idb.Database database;
+
+  // The on upgrade needed callback. This function runs in the context
+  // of the version change transaction. Any indexed_db functionality that must
+  // be run in the context of the version change transaction must be put in here.
+  void upgradeNeeded(idb.VersionChangeEvent event) async {
+    // Get the database from the OpenDBRequest result
+    database = event.target.database;
+
+    // You must create your object store here.
+    database.createObjectStore(storeName);
+
+    // Add any functionality needed that needs to be done in this call back,
+    // example, create an index -
+    // objectStore.createIndex('name_index', 'name_index', unique: false);
+  }
 
   print('');
   print('EXAMPLE - Start');
@@ -31,11 +47,10 @@ void main() async {
   factory.deleteDatabase(dbName);
   print('EXAMPLE - Deleted database');
 
-  // Open the database and create the object store in one go.
-  // Compare with the factory.open method where an on version change callback
-  // must be supplied.
-  final result = await factory.openCreate(dbName, storeName);
-  final database = result.database;
+  // Create and open a database using the on upgrade needed callback.
+  // Allows specification of the version you wish to create and fine grained
+  // control of the creation process in the upgradeNeeded callback.
+  await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
   print(
       'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName');
 
