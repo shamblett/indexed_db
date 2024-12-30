@@ -28,10 +28,10 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_1.test.dart;
-             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_2.test.dart;
-             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_3.test.dart;
-             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_4.test.dart;
+        run: dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_1_test.dart;
+             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_2_test.dart;
+             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_3_test.dart;
+             dart run build_runner test --fail-on-severe -- -p chrome  test/indexeddb_4_test.dart;
 
   package-analysis:
     runs-on: ubuntu-latest
