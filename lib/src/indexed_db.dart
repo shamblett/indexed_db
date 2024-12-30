@@ -5,6 +5,11 @@
  * Copyright :  S.Hamblett
  */
 
+// Original API copyright
+// Copyright (c) 2020, the Dart project authors.
+// All rights reserved. Use of this source code is governed by a
+// BSD-style license.
+
 ///
 /// A client-side key-value store with support for indexes.
 ///
@@ -15,6 +20,7 @@
 ///
 /// In IndexedDB, each record is identified by a unique index or key,
 /// making data retrieval speedy.
+///
 /// You can store structured data,
 /// such as images, arrays, and maps using IndexedDB.
 /// The standard does not specify size limits for individual data items
@@ -22,26 +28,24 @@
 ///
 /// ## Using indexed_db
 ///
-/// The classes in this library provide an interface
-/// to the browser's IndexedDB, if it has one.
+/// This library provide an interface
+/// to the browser's IndexedDB functionality, specifically it wraps the provided IDBxxx
+/// interfaces to provide a more coherent means of access.
+///
 /// To use this library in your code:
 ///
 ///     import 'package:indexed_db/indexed_db';
 ///
-/// IndexedDB is almost universally supported in modern web browsers, but
-/// a web app can determine if the browser supports IndexedDB
-/// with [IdbFactory.supported]:
-///
-///     if (IdbFactory.supported)
-///       // Use indexeddb.
-///     else
-///       // Find an alternative.
-///
-///
-/// Here's how to use IdbFactory to open a database:
+/// Here's how to use IdbFactory to open a database and object store:
 ///
 ///      final factory = IdbFactory();
-///      final database = await factory.open(dbName, version: 1);
+///      final result  = await factory.openCreate(dbName, storeName);
+///      final database = result.database;
+///      final objectStore = result.objectStore;
+///
+/// You can also use [IdbFactory.open] and pass an upgrade needed callback if you need
+/// finer control of the creation process. Note that if you are using certain indexed_db
+/// facilities such a creating indexes you must use this method.
 ///
 /// All data in an IndexedDB is stored within an [ObjectStore].
 /// To manipulate the database use [Transaction]s.

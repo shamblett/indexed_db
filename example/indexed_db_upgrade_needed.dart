@@ -16,9 +16,9 @@ void printValues(String message, dynamic key, dynamic value) =>
     print('EXAMPLE - $message - Key $key, Value $value');
 
 ///
-/// An example of how to create a database and object store for simple key/value storage and retrieval.
-/// Use for simple index_db use cases where more advanced functionality such as indexes etc. is not
-/// needed.
+/// An example of how to create a database and object store for more advanced use cases.
+/// Allows for the creation of indexes and any other functionality that may need to be
+/// run in the context of an on upgrade needed transaction.
 void main() async {
   var dbName = 'IDBTestDatabase';
   final factory = idb.IdbFactory();
