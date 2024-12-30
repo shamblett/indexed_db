@@ -6,4 +6,3 @@
  */
 
 export 'src/indexed_db.dart';
-
