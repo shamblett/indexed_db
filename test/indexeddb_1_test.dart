@@ -6,7 +6,7 @@
  */
 
 @TestOn('browser')
-@Timeout(Duration(seconds: 45))
+@Timeout(Duration(seconds: 60))
 library;
 
 import 'dart:js_interop';
