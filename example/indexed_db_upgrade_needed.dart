@@ -52,7 +52,8 @@ void main() async {
   // control of the creation process in the upgradeNeeded callback.
   await factory.open(dbName, version: 1, onUpgradeNeeded: upgradeNeeded);
   print(
-      'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName');
+    'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName',
+  );
 
   // All database updates and retrievals must be performed in the context of a transaction.
 

@@ -251,13 +251,16 @@ extension type IdbFactory._(IDBFactory factory) {
   int cmp(Object first, Object second) =>
       factory.cmp(first.jsify(), second.jsify());
 
-  Future<Database> open(String name,
-      {int? version,
-      void Function(VersionChangeEvent event)? onUpgradeNeeded,
-      void Function(Event event)? onBlocked}) {
+  Future<Database> open(
+    String name, {
+    int? version,
+    void Function(VersionChangeEvent event)? onUpgradeNeeded,
+    void Function(Event event)? onBlocked,
+  }) {
     if ((version == null) != (onUpgradeNeeded == null)) {
-      return Future.error(ArgumentError(
-          'Version and onUpgradeNeeded must be specified together'));
+      return Future.error(
+        ArgumentError('Version and onUpgradeNeeded must be specified together'),
+      );
     }
     try {
       OpenDBRequest request;
@@ -289,15 +292,22 @@ extension type IdbFactory._(IDBFactory factory) {
   /// The [OpenCreateResult] contains both the database and the object store
   ///
   /// Note: not part of the original dart:indexed_db implementation.
-  Future<OpenCreateResult> openCreate(String dbName, String objectStoreName,
-      {keyPath, bool? autoIncrement}) async {
+  Future<OpenCreateResult> openCreate(
+    String dbName,
+    String objectStoreName, {
+    keyPath,
+    bool? autoIncrement,
+  }) async {
     late Database database;
     late ObjectStore objectStore;
 
     void upgradeNeeded(VersionChangeEvent event) async {
       database = event.target.database;
-      objectStore = database.createObjectStore(objectStoreName,
-          keyPath: keyPath, autoIncrement: autoIncrement);
+      objectStore = database.createObjectStore(
+        objectStoreName,
+        keyPath: keyPath,
+        autoIncrement: autoIncrement,
+      );
     }
 
     try {
@@ -306,7 +316,8 @@ extension type IdbFactory._(IDBFactory factory) {
       request = OpenDBRequest._fromFactory(factory.open(dbName));
       request.onUpgradeNeeded.listen(upgradeNeeded);
       _completeRequest(Request._fromFactory(request.idbObject)).then(
-          (_) => completer.complete(OpenCreateResult(database, objectStore)));
+        (_) => completer.complete(OpenCreateResult(database, objectStore)),
+      );
       return completer.future;
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
@@ -491,8 +502,9 @@ extension type Index._(IDBIndex index) {
     if (direction == null) {
       request = Request._fromIndex(index.openKeyCursor(key_OR_range, "next"));
     } else {
-      request =
-          Request._fromIndex(index.openKeyCursor(key_OR_range, direction));
+      request = Request._fromIndex(
+        index.openKeyCursor(key_OR_range, direction),
+      );
     }
     return ObjectStore._cursorStreamFromResult(request, autoAdvance);
   }
@@ -513,12 +525,12 @@ extension type KeyRange._(IDBKeyRange keyrange) {
   ]) : keyrange = IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen);
 
   KeyRange.lowerBound(dynamic bound, [bool open = false])
-      : keyrange = IDBKeyRange.lowerBound(bound, open);
+    : keyrange = IDBKeyRange.lowerBound(bound, open);
 
   KeyRange.only(dynamic value) : keyrange = IDBKeyRange.only(value);
 
   KeyRange.upperBound(dynamic bound, [bool open = false])
-      : keyrange = IDBKeyRange.upperBound(bound, open);
+    : keyrange = IDBKeyRange.upperBound(bound, open);
 
   Object? get lower => keyrange.lower;
 
@@ -535,8 +547,7 @@ extension type KeyRange._(IDBKeyRange keyrange) {
     Object upper, [
     bool? lowerOpen,
     bool? upperOpen,
-  ]) =>
-      KeyRange.bound(lower, upper, lowerOpen ?? false, upperOpen ?? false);
+  ]) => KeyRange.bound(lower, upper, lowerOpen ?? false, upperOpen ?? false);
 
   static KeyRange lowerBound_(Object bound, [bool? open]) =>
       KeyRange.lowerBound(bound, open ?? false);
@@ -599,7 +610,9 @@ extension type Database._(IDBDatabase database) implements EventTarget {
     bool? autoIncrement,
   }) {
     final options = IDBObjectStoreParameters(
-        keyPath: keyPath?.jsify(), autoIncrement: autoIncrement ?? false);
+      keyPath: keyPath?.jsify(),
+      autoIncrement: autoIncrement ?? false,
+    );
 
     final objectStore = database.createObjectStore(name, options);
     return ObjectStore._fromCreateRequest(objectStore);
@@ -746,7 +759,8 @@ extension type ObjectStore._(IDBObjectStore store) {
   Future delete(dynamic key_OR_keyRange) {
     try {
       return _completeRequest(
-          Request._fromObjectStore(store.delete(key_OR_keyRange)));
+        Request._fromObjectStore(store.delete(key_OR_keyRange)),
+      );
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
     }
@@ -815,15 +829,17 @@ extension type ObjectStore._(IDBObjectStore store) {
     if (direction == null) {
       request = Request._fromObjectStore(store.openCursor(key_OR_range));
     } else {
-      request =
-          Request._fromObjectStore(store.openCursor(key_OR_range, direction));
+      request = Request._fromObjectStore(
+        store.openCursor(key_OR_range, direction),
+      );
     }
     return _cursorWithValueStreamFromResult(request, autoAdvance);
   }
 
   Request openKeyCursor(Object? range, [String? direction]) =>
       Request._fromObjectStore(
-          store.openKeyCursor(range.jsify(), direction ?? 'next'));
+        store.openKeyCursor(range.jsify(), direction ?? 'next'),
+      );
 
   Future put(dynamic value, [dynamic key]) {
     try {
@@ -846,7 +862,9 @@ extension type ObjectStore._(IDBObjectStore store) {
   //Helper for iterating over cursors in a request.
   //
   static Stream<Cursor> _cursorStreamFromResult(
-      Request request, bool? autoAdvance) {
+    Request request,
+    bool? autoAdvance,
+  ) {
     var controller = StreamController<Cursor>(sync: true);
 
     request.onError.listen(controller.addError);
@@ -875,7 +893,9 @@ extension type ObjectStore._(IDBObjectStore store) {
   //Helper for iterating over cursors with values in a request.
   //
   static Stream<CursorWithValue> _cursorWithValueStreamFromResult(
-      Request request, bool? autoAdvance) {
+    Request request,
+    bool? autoAdvance,
+  ) {
     var controller = StreamController<CursorWithValue>(sync: true);
 
     request.onError.listen(controller.addError);
@@ -883,8 +903,9 @@ extension type ObjectStore._(IDBObjectStore store) {
     request.onSuccess.listen((e) {
       if (!controller.isClosed) {
         if (request.result != null) {
-          CursorWithValue cursor =
-              CursorWithValue._fromObjectStore(request.result);
+          CursorWithValue cursor = CursorWithValue._fromObjectStore(
+            request.result,
+          );
           if (cursor == null) {
             controller.close();
           } else {
