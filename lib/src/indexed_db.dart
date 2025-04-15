@@ -78,10 +78,12 @@ typedef DomException = DOMException;
 
 ///
 /// Helper class for [openCreate] return value
+///
 class OpenCreateResult {
-  OpenCreateResult(this.database, this.objectStore);
   Database database;
   ObjectStore objectStore;
+
+  OpenCreateResult(this.database, this.objectStore);
 }
 
 /// Version Change Event
@@ -264,11 +266,10 @@ extension type IdbFactory._(IDBFactory factory) {
     }
     try {
       OpenDBRequest request;
-      if (version != null) {
-        request = OpenDBRequest._fromFactory(factory.open(name, version));
-      } else {
-        request = OpenDBRequest._fromFactory(factory.open(name));
-      }
+      request =
+          version != null
+              ? OpenDBRequest._fromFactory(factory.open(name, version))
+              : OpenDBRequest._fromFactory(factory.open(name));
 
       if (onUpgradeNeeded != null) {
         request.onUpgradeNeeded.listen(onUpgradeNeeded);
@@ -473,11 +474,10 @@ extension type Index._(IDBIndex index) {
       key_OR_range = range;
     }
     Request request;
-    if (direction == null) {
-      request = Request._fromIndex(index.openCursor(key_OR_range, "next"));
-    } else {
-      request = Request._fromIndex(index.openCursor(key_OR_range, direction));
-    }
+    request =
+        direction == null
+            ? Request._fromIndex(index.openCursor(key_OR_range, "next"))
+            : Request._fromIndex(index.openCursor(key_OR_range, direction));
     return ObjectStore._cursorWithValueStreamFromResult(request, autoAdvance);
   }
 
@@ -499,13 +499,10 @@ extension type Index._(IDBIndex index) {
       key_OR_range = range;
     }
     Request request;
-    if (direction == null) {
-      request = Request._fromIndex(index.openKeyCursor(key_OR_range, "next"));
-    } else {
-      request = Request._fromIndex(
-        index.openKeyCursor(key_OR_range, direction),
-      );
-    }
+    request =
+        direction == null
+            ? Request._fromIndex(index.openKeyCursor(key_OR_range, "next"))
+            : Request._fromIndex(index.openKeyCursor(key_OR_range, direction));
     return ObjectStore._cursorStreamFromResult(request, autoAdvance);
   }
 
@@ -712,11 +709,7 @@ extension type ObjectStore._(IDBObjectStore store) {
   Future add(dynamic value, [dynamic key]) {
     try {
       final IDBRequest request;
-      if (key != null) {
-        request = store.add(value, key);
-      } else {
-        request = store.add(value);
-      }
+      request = key != null ? store.add(value, key) : store.add(value);
       return _completeRequest(Request._fromObjectStore(request));
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
@@ -826,13 +819,12 @@ extension type ObjectStore._(IDBObjectStore store) {
     }
 
     final Request request;
-    if (direction == null) {
-      request = Request._fromObjectStore(store.openCursor(key_OR_range));
-    } else {
-      request = Request._fromObjectStore(
-        store.openCursor(key_OR_range, direction),
-      );
-    }
+    request =
+        direction == null
+            ? Request._fromObjectStore(store.openCursor(key_OR_range))
+            : Request._fromObjectStore(
+              store.openCursor(key_OR_range, direction),
+            );
     return _cursorWithValueStreamFromResult(request, autoAdvance);
   }
 
@@ -844,11 +836,10 @@ extension type ObjectStore._(IDBObjectStore store) {
   Future put(dynamic value, [dynamic key]) {
     try {
       final Request request;
-      if (key != null) {
-        request = Request._fromObjectStore(store.put(value, key));
-      } else {
-        request = Request._fromObjectStore(store.put(value));
-      }
+      request =
+          key != null
+              ? Request._fromObjectStore(store.put(value, key))
+              : Request._fromObjectStore(store.put(value));
       return _completeRequest(request);
     } catch (e, stacktrace) {
       return Future.error(e, stacktrace);
