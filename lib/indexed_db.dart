@@ -8,19 +8,15 @@
 /// A client-side key-value store with support for indexes.
 ///
 /// > [!Note]
-/// > New projects should prefer to use
-/// > [package:web](https://pub.dev/packages/web). For existing projects, see
-/// > our [migration guide](https://dart.dev/go/package-web).
+/// > THis package is a drop in replacement for the now deprecated dart:indexed_db Dart library.
 ///
 /// IndexedDB is a web standard API for client-side storage of
 /// structured data. By storing data on the client in an IndexedDB,
 /// apps can get advantages such as faster performance and
 /// persistence.
 ///
-/// In IndexedDB, each record is identified by a unique index or key,
-/// making data retrieval speedy.
-/// You can store structured data,
-/// such as images, arrays, and maps using IndexedDB.
+/// In IndexedDB, each record is identified by a unique index or key, making data retrieval speedy.
+/// You can store structured data,such as images, arrays, and maps using IndexedDB.
 /// The standard does not specify size limits for individual data items
 /// or for the database itself, but browsers may impose storage limits.
 ///
@@ -30,7 +26,7 @@
 /// to the browser's IndexedDB, if it has one.
 /// To use this library in your code:
 ///
-///     import 'dart:indexed_db';
+///     import 'package:indexed_db/indexed_db.dart';
 ///
 /// IndexedDB is almost universally supported in modern web browsers, but
 /// a web app can determine if the browser supports IndexedDB
@@ -41,34 +37,19 @@
 ///     else
 ///       // Find an alternative.
 ///
-/// Access to the browser's IndexedDB is provided by the app's top-level
-/// [Window] object, which your code can refer to with `window.indexedDB`.
-/// So, for example,
-/// here's how to use window.indexedDB to open a database:
+/// See this [example](https://github.com/shamblett/indexed_db/blob/master/example/indexed_db_upgrade_needed.dart) for how to open an indexed_db database as per the original
+/// Dart library, i.e. using the upgrade needed callback.
 ///
-///     Future open() {
-///       return window.indexedDB.open('myIndexedDB',
-///           version: 1,
-///           onUpgradeNeeded: _initializeDatabase)
-///         .then(_loadFromDB);
-///     }
-///     void _initializeDatabase(VersionChangeEvent e) {
-///       ...
-///     }
-///     Future _loadFromDB(Database db) {
-///       ...
-///     }
+/// This [example](https://github.com/shamblett/indexed_db/blob/master/example/indexed_db.dart) shows how to
+/// open a database by supplying an object store name. This is a convenience function not available
+/// in the original Dart library.
 ///
 /// All data in an IndexedDB is stored within an [ObjectStore].
 /// To manipulate the database use [Transaction]s.
 ///
 /// ## Other resources
 ///
-/// Other options for client-side data storage include:
-///
-/// * [Window.localStorage]&mdash;a
-/// basic mechanism that stores data as a [Map],
-/// and where both the keys and the values are strings.
+/// This package extends the indexed_db interface as exposed by package [web](https://pub.dev/documentation/web/latest/)
 ///
 /// MDN provides [API
 /// documentation](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API).
