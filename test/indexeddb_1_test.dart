@@ -52,8 +52,11 @@ main() {
     factory.deleteDatabase(dbName);
 
     // Open the database at version 1
-    final database = await factory.open(dbName,
-        version: version, onUpgradeNeeded: onUpgradeNeeded);
+    final database = await factory.open(
+      dbName,
+      version: version,
+      onUpgradeNeeded: onUpgradeNeeded,
+    );
     expect(database, isNotNull);
     expect(database.name, dbName);
     expect(database.version, 1);
@@ -84,8 +87,11 @@ main() {
     factory.deleteDatabase(dbName);
 
     // Open the database at version 1
-    var database = await factory.open(dbName,
-        version: version, onUpgradeNeeded: onUpgradeNeeded1);
+    var database = await factory.open(
+      dbName,
+      version: version,
+      onUpgradeNeeded: onUpgradeNeeded1,
+    );
     expect(database, isNotNull);
     expect(database.name, dbName);
     expect(database.version, 1);
@@ -98,8 +104,11 @@ main() {
     database.close();
 
     // Open the database at version 2
-    database = await factory.open(dbName,
-        version: version + 1, onUpgradeNeeded: onUpgradeNeeded2);
+    database = await factory.open(
+      dbName,
+      version: version + 1,
+      onUpgradeNeeded: onUpgradeNeeded2,
+    );
     expect(database, isNotNull);
     expect(database.name, dbName);
     expect(database.version, 2);
@@ -155,8 +164,9 @@ main() {
     value = await transaction.objectStore(storeName).getObject('List');
     expect(value, [1, 2, 3]);
     // Dartify maps
-    JSObject valueMap =
-        await transaction.objectStore(storeName).getObject('Map');
+    JSObject valueMap = await transaction
+        .objectStore(storeName)
+        .getObject('Map');
     expect(valueMap.dartify(), {'first': 1, 'second': 2});
     value = await transaction.objectStore(storeName).getObject('Bool');
     expect(value, isTrue);
@@ -201,8 +211,9 @@ main() {
     value = await transaction.objectStore(storeName).getObject('List');
     expect(value, [1, 2, 3]);
     // Dartify maps
-    JSObject valueMap =
-        await transaction.objectStore(storeName).getObject('Map');
+    JSObject valueMap = await transaction
+        .objectStore(storeName)
+        .getObject('Map');
     expect(valueMap.dartify(), {'first': 1, 'second': 2});
     value = await transaction.objectStore(storeName).getObject('Bool');
     expect(value, isTrue);

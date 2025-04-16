@@ -37,7 +37,8 @@ void main() async {
   final result = await factory.openCreate(dbName, storeName);
   final database = result.database;
   print(
-      'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName');
+    'EXAMPLE - Created new database and object store, database is $dbName, store is $storeName',
+  );
 
   // All database updates and retrievals must be performed in the context of a transaction.
 

@@ -32,8 +32,9 @@ Future<idb.Database> writeItems(idb.Database db) {
   Future<Object?> write(index) {
     var transaction = db.transaction(storeName, 'readwrite');
     return transaction
-        .objectStore(storeName)
-        .put({'content': 'Item $index'}.jsify(), index) as Future<Object?>;
+            .objectStore(storeName)
+            .put({'content': 'Item $index'}.jsify(), index)
+        as Future<Object?>;
   }
 
   var future = write(0);
@@ -49,13 +50,18 @@ Future<idb.Database> setupDb() {
   return createAndOpenDb().then(writeItems);
 }
 
-testRange(idb.Database db, idb.KeyRange range, int expectedFirst,
-    int expectedLast) async {
+testRange(
+  idb.Database db,
+  idb.KeyRange range,
+  int expectedFirst,
+  int expectedLast,
+) async {
   idb.Transaction txn = db.transaction(storeName, 'readonly');
   idb.ObjectStore objectStore = txn.objectStore(storeName);
-  var cursors = objectStore
-      .openCursor(range: range, autoAdvance: true)
-      .asBroadcastStream();
+  var cursors =
+      objectStore
+          .openCursor(range: range, autoAdvance: true)
+          .asBroadcastStream();
   int lastKey = 0;
   cursors.listen((idb.CursorWithValue cursor) {
     lastKey = cursor.key as int;
@@ -83,18 +89,28 @@ main() async {
   // test('only3', () => testRange(db, idb.KeyRange.only(-1), null, null));
   test('lower1', () => testRange(db, idb.KeyRange.lowerBound(40), 40, 99));
   test(
-      'lower2', () => testRange(db, idb.KeyRange.lowerBound(40, true), 41, 99));
-  test('lower3',
-      () => testRange(db, idb.KeyRange.lowerBound(40, false), 40, 99));
+    'lower2',
+    () => testRange(db, idb.KeyRange.lowerBound(40, true), 41, 99),
+  );
+  test(
+    'lower3',
+    () => testRange(db, idb.KeyRange.lowerBound(40, false), 40, 99),
+  );
   test('upper1', () => testRange(db, idb.KeyRange.upperBound(40), 0, 40));
   test('upper2', () => testRange(db, idb.KeyRange.upperBound(40, true), 0, 39));
   test(
-      'upper3', () => testRange(db, idb.KeyRange.upperBound(40, false), 0, 40));
+    'upper3',
+    () => testRange(db, idb.KeyRange.upperBound(40, false), 0, 40),
+  );
   test('bound1', () => testRange(db, idb.KeyRange.bound(20, 30), 20, 30));
   test('bound2', () => testRange(db, idb.KeyRange.bound(-100, 200), 0, 99));
-  test('bound3',
-      () => testRange(db, idb.KeyRange.bound(20, 30, false, true), 20, 29));
+  test(
+    'bound3',
+    () => testRange(db, idb.KeyRange.bound(20, 30, false, true), 20, 29),
+  );
   test('bound4', () => testRange(db, idb.KeyRange.bound(20, 30, true), 21, 30));
-  test('bound5',
-      () => testRange(db, idb.KeyRange.bound(20, 30, true, true), 21, 29));
+  test(
+    'bound5',
+    () => testRange(db, idb.KeyRange.bound(20, 30, true, true), 21, 29),
+  );
 }
