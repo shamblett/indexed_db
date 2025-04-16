@@ -5,18 +5,18 @@ DocumentName: indexed_db
 DocumentNamespace: https://pub.dev/packages/indexed_db
 LicenseListVersion: 3.8
 Creator: Tool: https://pub.dev/packages/sbom
-Created: 2024-12-30T11:36:04Z
+Created: 2025-04-16T10:46:50Z
 
 
 PackageName: indexed-db
 SPDXID: SPDXRef-Package-indexed-db
-PackageVersion: 1.0.0
+PackageVersion: 1.0.1
 PackageFileName: indexed_db
 PackageSupplier: NOASSERTION
 PackageOriginator: NOASSERTION
 PackageDownloadLocation: https://pub.dev/packages/indexed_db
 FilesAnalyzed: true
-PackageVerificationCode: 0874ee0936a732a107aa04c21a466d77b9e59558
+PackageVerificationCode: b8fc180ac67a91ea0a4e4081ccb90094f736c938
 PackageHomePage: https://pub.dev/packages/indexed_db
 PackageLicenseConcluded: MIT
 PackageLicenseInfoFromFiles: NOASSERTION
@@ -28,7 +28,7 @@ PackageSummary: <text>A drop in replacement for the dart:indexed_db library base
 FileName: lib/indexed_db.dart
 SPDXID: SPDXRef-indexed-db-0
 FileType: SOURCE
-FileChecksum: SHA1: f87a0c6de6d4900a585cd99851e584e4ac1e7c58
+FileChecksum: SHA1: d91c8d599bb0ffd1d4a237ee0e128ffa70dc3272
 LicenseConcluded: NOASSERTION
 LicenseInfoInFile: NOASSERTION
 FileCopyrightText: NOASSERTION
@@ -37,7 +37,7 @@ FileCopyrightText: NOASSERTION
 FileName: lib/src/indexed_db.dart
 SPDXID: SPDXRef-indexed-db-1
 FileType: SOURCE
-FileChecksum: SHA1: de2e4b1660cb2b1bb4bb93765ac37131f5786c0f
+FileChecksum: SHA1: 470ba7fd55671a22f6e39a62399754d194899235
 LicenseConcluded: NOASSERTION
 LicenseInfoInFile: NOASSERTION
 FileCopyrightText: NOASSERTION
@@ -46,7 +46,7 @@ FileCopyrightText: NOASSERTION
 FileName: pubspec.yaml
 SPDXID: SPDXRef-pubspec-2
 FileType: TEXT
-FileChecksum: SHA1: 0a612c06ed04c0124f7ab891903b4c3092f114df
+FileChecksum: SHA1: 03c7861e654349b6787f8200b9005c82ecb4f2ba
 LicenseConcluded: NOASSERTION
 LicenseInfoInFile: NOASSERTION
 FileCopyrightText: NOASSERTION

@@ -1,5 +1,5 @@
 name: indexed_db
-version: 1.0.0
+version: 1.0.1
 description: A drop in replacement for the dart:indexed_db library based on package web.
 repository: https://github.com/shamblett/indexed_db
 homepage: https://github.com/shamblett/indexed_db
